@@ -643,6 +643,75 @@ app.post("/api/search-by-image", async (req, res) => {
 
 // ====================================================
 
+// ==================== SEO ROUTING ====================
+
+// 1. Robots.txt Configuration
+app.get("/robots.txt", (req, res) => {
+  const host = req.headers.host || "zshopbd.com";
+  const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  const robots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+  res.header("Content-Type", "text/plain");
+  res.status(200).send(robots);
+});
+
+// 2. Dynamic XML Sitemap Generator
+app.get("/sitemap.xml", (req, res) => {
+  const host = req.headers.host || "zshopbd.com";
+  const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+  const baseUrl = `${protocol}://${host}`;
+
+  const db = getDB();
+  const products = db.products || [];
+  const currentDate = new Date().toISOString().split("T")[0];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
+  </url>`;
+
+  // Add Product detail dynamic URLs for search indexing
+  products.forEach((prod: any) => {
+    const prodUrl = `${baseUrl}/?product=${prod.id}`;
+    // Clean strings of special characters to prevent xml parsing issues
+    const titleSafe = prod.title
+      ? prod.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")
+      : "";
+
+    xml += `
+  <url>
+    <loc>${prodUrl}</loc>
+    <lastmod>${currentDate}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.85</priority>
+    ${prod.image ? `
+    <image:image>
+      <image:loc>${prod.image}</image:loc>
+      <image:title>${titleSafe}</image:title>
+    </image:image>` : ""}
+  </url>`;
+  });
+
+  xml += `\n</urlset>`;
+
+  res.header("Content-Type", "application/xml");
+  res.status(200).send(xml);
+});
+
+// ====================================================
+
 // Vite Middleware integrating or Production static folder setup
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
