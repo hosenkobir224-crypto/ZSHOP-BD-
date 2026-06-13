@@ -806,6 +806,8 @@ export default function App() {
           setIsDetailModalOpen(false);
           setSelectedProduct(null);
         }}
+        products={products}
+        onSelectProduct={setSelectedProduct}
         onAddToCartWithSpecs={(prod, qty, col, sz) => {
           handleAddToCartWithSpecs(prod, qty, col, sz);
           // Wait, after they add from modal details, we can trigger the sidebar opening!
