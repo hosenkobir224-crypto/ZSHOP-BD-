@@ -1509,7 +1509,7 @@ export default function CustomerProfile({
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
                           <h4 className="text-sm font-display font-black text-white uppercase tracking-wider">{activeMerchant.shopName}</h4>
-                          <span className="bg-amber-450 text-slate-900 font-extrabold text-[8px] px-1.5 py-0.2 rounded uppercase tracking-wider">ZSHOP Seller</span>
+                          <span className="bg-amber-450 text-slate-900 font-extrabold text-[8px] px-1.5 py-0.2 rounded uppercase tracking-wider">ZSHOP BD MALL SELLER</span>
                         </div>
                         <p className="text-[10px] text-rose-100 flex items-center gap-1">
                           <User className="w-3 h-3 text-rose-200" />

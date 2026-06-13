@@ -21,7 +21,9 @@ import {
   Award,
   Zap,
   CheckCircle2,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Product } from "../types";
 
@@ -68,6 +70,7 @@ export default function ProductDetailModal({
 
   // Gallery Active View
   const [activeImage, setActiveImage] = useState<string>("");
+  const [activeThumbId, setActiveThumbId] = useState<string>("thumb-1");
 
   // Tab State
   const [activeTab, setActiveTab] = useState<"detail" | "specs" | "qa" | "reviews">("detail");
@@ -100,7 +103,7 @@ export default function ProductDetailModal({
     if (!product) return [];
     
     const common = [
-      { label: "ব্র্যান্ড (Brand)", value: product.isTrending ? "ZSHOP Mall Verified" : "ZSHOP Core Exclusive" },
+      { label: "ব্র্যান্ড (Brand)", value: product.isTrending ? "ZSHOP BD MALL SELLER" : "ZSHOP Core Exclusive" },
       { label: "প্রোডাক্ট আইডি (Product ID)", value: `#ZSP-${product.id.toUpperCase()}` },
       { label: "ক্যাটাগরি (Category)", value: product.category === "clothing" ? "পোশাক ও ফ্যাশন (Apparel)" : product.category === "watches" ? "লাক্সারি টাইমপিস (Premium watches)" : product.category === "electronics" ? "স্মার্ট অ্যাক্সেসরিজ (Electronics)" : product.category === "kitchen" ? "হোম ও কিচেন (Home utilities)" : "স্পোর্টিং আইটেম (Sports & fitness)" },
     ];
@@ -201,6 +204,15 @@ export default function ProductDetailModal({
       setQuantity(1);
       setAddedMessage(false);
       setActiveImage(product.image);
+      setActiveThumbId("thumb-1");
+      
+      // Reset scroll position of the gallery container
+      setTimeout(() => {
+        const scrollContainer = document.getElementById("product-gallery-scroll-container");
+        if (scrollContainer) {
+          scrollContainer.scrollLeft = 0;
+        }
+      }, 50);
       setActiveTab("detail");
       setIsWishlisted(localStorage.getItem(`zshop_bd_wishlist_${product.id}`) === "true");
 
@@ -491,39 +503,106 @@ export default function ProductDetailModal({
             
             {/* Left side: Premium Image Gallery Hub (5 cols) */}
             <div className="lg:col-span-5 space-y-4">
-              {/* Primary Image Viewport */}
+              {/* Primary Image Viewport - NOW HORIZONTALLY SCROLLABLE/SWIPEABLE */}
               <div className="relative aspect-square rounded-2xl bg-slate-50 border border-gray-200 overflow-hidden shadow-sm group">
-                <img
-                  src={activeImage}
-                  alt={product.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-center transition-transform duration-300 hover:scale-135 cursor-zoom-in"
-                />
+                <div 
+                  id="product-gallery-scroll-container"
+                  className="w-full h-full overflow-x-auto flex snap-x snap-mandatory scroll-smooth scrollbar-none select-none"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    if (el.clientWidth > 0) {
+                      const scrollPos = el.scrollLeft;
+                      const idx = Math.round(scrollPos / el.clientWidth);
+                      const targetThumb = alternativeThumbnails[idx];
+                      if (targetThumb && targetThumb.id !== activeThumbId) {
+                        setActiveThumbId(targetThumb.id);
+                      }
+                    }
+                  }}
+                >
+                  {alternativeThumbnails.map((thumb) => (
+                    <div 
+                      key={thumb.id}
+                      className="w-full h-full shrink-0 snap-center snap-always relative aspect-square overflow-hidden"
+                    >
+                      <img
+                        src={thumb.image}
+                        alt={`${product.title} - ${thumb.label}`}
+                        referrerPolicy="no-referrer"
+                        className={`w-full h-full object-cover object-center transition-transform duration-300 hover:scale-135 cursor-zoom-in ${thumb.styleClass}`}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Left/Right Navigation Slide Arrows */}
+                <button
+                  onClick={() => {
+                    const container = document.getElementById("product-gallery-scroll-container");
+                    if (container) {
+                      container.scrollBy({ left: -container.clientWidth, behavior: "smooth" });
+                    }
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-slate-800 p-1.5 rounded-full shadow-md z-10 cursor-pointer border border-gray-150 hover:scale-105 transition-all select-none focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-100 duration-200"
+                  title="পূর্ববর্তী ছবি"
+                >
+                  <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                </button>
+                <button
+                  onClick={() => {
+                    const container = document.getElementById("product-gallery-scroll-container");
+                    if (container) {
+                      container.scrollBy({ left: container.clientWidth, behavior: "smooth" });
+                    }
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-slate-800 p-1.5 rounded-full shadow-md z-10 cursor-pointer border border-gray-150 hover:scale-105 transition-all select-none focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-100 duration-200"
+                  title="পরবর্তী ছবি"
+                >
+                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+                </button>
 
                 {/* Micro campaign tag inside image */}
                 {product.discountTag && (
-                  <span className="absolute top-4 left-4 bg-gradient-to-r from-rose-600 to-amber-500 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider shadow-md">
+                  <span className="absolute top-4 left-4 bg-gradient-to-r from-rose-600 to-amber-500 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider shadow-md z-10">
                     {product.discountTag}
                   </span>
                 )}
 
                 {/* Trending Ribbon */}
                 {product.isTrending && (
-                  <div className="absolute top-4 right-4 bg-slate-950/85 text-amber-400 font-extrabold text-[9px] px-2 py-1 rounded-md border border-amber-400/20 flex items-center gap-1 uppercase tracking-wide">
+                  <div className="absolute top-4 right-4 bg-slate-950/85 text-amber-400 font-extrabold text-[9px] px-2 py-1 rounded-md border border-amber-400/20 flex items-center gap-1 uppercase tracking-wide z-10">
                     <Award className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                    <span>MALL</span>
+                    <span>ZSHOP BD MALL SELLER</span>
                   </div>
                 )}
               </div>
 
               {/* Thumbnail snapshots block */}
               <div className="grid grid-cols-4 gap-2">
-                {alternativeThumbnails.map((thumb) => (
+                {alternativeThumbnails.map((thumb, index) => (
                   <button
                     key={thumb.id}
-                    onClick={() => setActiveImage(thumb.image)}
-                    onMouseEnter={() => setActiveImage(thumb.image)}
-                    className={`relative aspect-square rounded-xl bg-slate-50 border overflow-hidden transition-all duration-200 cursor-pointer ${activeImage === thumb.image ? "border-[#f85606] shadow-xs scale-[1.02] ring-1 ring-[#f85606]/30" : "border-gray-200 hover:border-gray-400"}`}
+                    onClick={() => {
+                      setActiveThumbId(thumb.id);
+                      const container = document.getElementById("product-gallery-scroll-container");
+                      if (container) {
+                        container.scrollTo({
+                          left: index * container.clientWidth,
+                          behavior: "smooth"
+                        });
+                      }
+                    }}
+                    onMouseEnter={() => {
+                      setActiveThumbId(thumb.id);
+                      const container = document.getElementById("product-gallery-scroll-container");
+                      if (container) {
+                        container.scrollTo({
+                          left: index * container.clientWidth,
+                          behavior: "smooth"
+                        });
+                      }
+                    }}
+                    className={`relative aspect-square rounded-xl bg-slate-50 border overflow-hidden transition-all duration-200 cursor-pointer ${activeThumbId === thumb.id ? "border-[#f85606] shadow-xs scale-[1.02] ring-1 ring-[#f85606]/30" : "border-gray-200 hover:border-gray-400"}`}
                   >
                     <img
                       src={thumb.image}
@@ -584,7 +663,7 @@ export default function ProductDetailModal({
                     </span>
                   ) : (
                     <span className="text-[10px] font-bold text-slate-500 border-l border-gray-300 pl-2">
-                      সেলার: <span className="text-slate-900 font-black">ZSHOP BD Mall (অফিসিয়াল)</span>
+                      সেলার: <span className="text-slate-900 font-black">ZSHOP BD MALL SELLER (অফিসিয়াল)</span>
                     </span>
                   )}
                 </div>
@@ -847,7 +926,7 @@ export default function ProductDetailModal({
                   <div className="p-3 bg-rose-50/40 border border-rose-100 rounded-xl text-[12px] text-slate-800 flex items-start gap-2 max-w-2xl">
                     <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold text-rose-950">ZSHOP BD Mall গ্যারান্টিঃ</p>
+                      <p className="font-bold text-rose-950">ZSHOP BD MALL SELLER গ্যারান্টিঃ</p>
                       <p className="mt-0.5 text-slate-600">আমরা সরাসরি ব্র্যান্ড অথেন্টিসিটির গ্যারান্টি দিয়ে পণ্য সরবরাহ করে থাকি। ছবিতে প্রদর্শিত মূল্যের বাইরে কোনো অতিরিক্ত চার্জ নেই।</p>
                     </div>
                   </div>

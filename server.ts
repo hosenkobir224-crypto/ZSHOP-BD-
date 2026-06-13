@@ -21,7 +21,8 @@ function getDB() {
         orders: [],
         customers: [],
         merchants: [],
-        affiliates: []
+        affiliates: [],
+        visits: { total: 0, daily: {} }
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(defaultState, null, 2));
       return defaultState;
@@ -31,6 +32,9 @@ function getDB() {
     if (!parsed.affiliates) {
       parsed.affiliates = [];
     }
+    if (!parsed.visits) {
+      parsed.visits = { total: 0, daily: {} };
+    }
     return parsed;
   } catch (error) {
     console.error("Error reading database file:", error);
@@ -39,7 +43,8 @@ function getDB() {
       orders: [],
       customers: [],
       merchants: [],
-      affiliates: []
+      affiliates: [],
+      visits: { total: 0, daily: {} }
     };
   }
 }
@@ -651,6 +656,44 @@ app.post("/api/search-by-image", async (req, res) => {
   } catch (err: any) {
     console.error("Visual Search processing error:", err);
     res.status(500).json({ success: false, message: err.message || "Failed to analyze image" });
+  }
+});
+
+// ==================== VISITOR ANALYTICS ENDPOINTS ====================
+app.post("/api/visit", (req, res) => {
+  try {
+    const db = getDB();
+    if (!db.visits) {
+      db.visits = { total: 0, daily: {} };
+    }
+    
+    // Increment total count
+    db.visits.total = (db.visits.total || 0) + 1;
+    
+    // Bangladesh local date (GMT+6)
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const bdTime = new Date(utc + (3600000 * 6));
+    const bdDateStr = bdTime.toISOString().split("T")[0]; // YYYY-MM-DD
+    
+    if (!db.visits.daily) {
+      db.visits.daily = {};
+    }
+    db.visits.daily[bdDateStr] = (db.visits.daily[bdDateStr] || 0) + 1;
+    
+    saveDB(db);
+    res.json({ success: true, total: db.visits.total, today: db.visits.daily[bdDateStr] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get("/api/visits/stats", (req, res) => {
+  try {
+    const db = getDB();
+    res.json({ success: true, stats: db.visits || { total: 0, daily: {} } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 

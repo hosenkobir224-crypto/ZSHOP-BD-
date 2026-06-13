@@ -25,7 +25,10 @@ import {
   Boxes,
   Image,
   Copy,
-  ExternalLink
+  ExternalLink,
+  Users,
+  Activity,
+  BarChart2
 } from "lucide-react";
 import { Product, Order, OrderItem, Promotion } from "../types";
 import { PROMOTIONS } from "../data";
@@ -87,6 +90,23 @@ export default function AdminPanel({
   const [editingBannerId, setEditingBannerId] = useState<string | null>(null);
   const [bannerSuccessMessage, setBannerSuccessMessage] = useState("");
   const [copiedProductId, setCopiedProductId] = useState<string | null>(null);
+
+  // Visitor counting stats state
+  const [visitorStats, setVisitorStats] = useState<{ total: number; daily: Record<string, number> }>({
+    total: 0,
+    daily: {}
+  });
+
+  const fetchVisitorStats = () => {
+    fetch("/api/visits/stats")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.stats) {
+          setVisitorStats(data.stats);
+        }
+      })
+      .catch(err => console.error("Error loading visitor stats:", err));
+  };
 
   const handleCopyProductLink = (productId: string) => {
     try {
@@ -291,6 +311,7 @@ export default function AdminPanel({
       loadOrders();
       loadBanners();
       loadPixelConfigAndLogs();
+      fetchVisitorStats();
     }
   }, [isOpen]);
 
@@ -658,7 +679,7 @@ export default function AdminPanel({
                   </h3>
 
                   {/* Highlights Bento-grid Cards */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex flex-col justify-start relative overflow-hidden">
                       <span className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-400 uppercase">
                         মোট সেলস (সমস্ত অর্ডার)
@@ -706,6 +727,84 @@ export default function AdminPanel({
                         <Boxes className="w-12 h-12 stroke-[1.5]" />
                       </div>
                     </div>
+
+                    {/* Today's Visitors Counter Category Card */}
+                    <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex flex-col justify-start relative overflow-hidden">
+                      <span className="text-[10px] font-mono tracking-wider font-extrabold text-orange-400 uppercase">
+                        আজকের ভিজিটর (Today)
+                      </span>
+                      <p className="text-lg sm:text-2xl font-display font-black text-white mt-1.5">
+                        {(() => {
+                          const d = new Date();
+                          const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+                          const bdTime = new Date(utc + (3600000 * 6));
+                          const bdDateStr = bdTime.toISOString().split("T")[0];
+                          return visitorStats.daily?.[bdDateStr] || 0;
+                        })()}
+                      </p>
+                      <div className="absolute right-3 bottom-3 text-orange-500/20">
+                        <Activity className="w-12 h-12 stroke-[1.5]" />
+                      </div>
+                    </div>
+
+                    {/* Total Visitors Counter Category Card */}
+                    <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 flex flex-col justify-start relative overflow-hidden">
+                      <span className="text-[10px] font-mono tracking-wider font-extrabold text-fuchsia-400 uppercase">
+                        সর্বমোট ভিজিটর (Total)
+                      </span>
+                      <p className="text-lg sm:text-2xl font-display font-black text-white mt-1.5">
+                        {visitorStats.total || 0}
+                      </p>
+                      <div className="absolute right-3 bottom-3 text-fuchsia-500/20">
+                        <Users className="w-12 h-12 stroke-[1.5]" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Daily Visitor Timeline Breakdown */}
+                  <div className="space-y-3 bg-slate-950/40 border border-slate-800/80 p-4 rounded-xl">
+                    <div className="flex items-center gap-2 justify-between">
+                      <div className="flex items-center gap-2">
+                        <BarChart2 className="w-4 h-4 text-fuchsia-400" />
+                        <h4 className="text-xs font-display font-bold text-white uppercase tracking-wider">
+                          Daily Visitor Report (দৈনিক ভিজিটর রিপোর্ট)
+                        </h4>
+                      </div>
+                      <span className="text-[10px] text-slate-500 font-mono">লাইভ ট্রাফিক কাউন্ট</span>
+                    </div>
+
+                    {Object.keys(visitorStats.daily || {}).length === 0 ? (
+                      <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500 text-xs">
+                        এখন পর্যন্ত কোনো ট্রাফিক ডেটা পাওয়া যায়নি।
+                      </div>
+                    ) : (
+                      <div className="max-h-[170px] overflow-y-auto divide-y divide-slate-800/60 pr-1 select-none">
+                        {Object.entries(visitorStats.daily || {})
+                          .sort((a, b) => b[0].localeCompare(a[0]))
+                          .slice(0, 15) // Show last 15 days
+                          .map(([date, count]) => {
+                            const formattedDate = new Date(date).toLocaleDateString("bn-BD", {
+                              weekday: "long",
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            });
+                            return (
+                              <div key={date} className="py-2.5 flex items-center justify-between text-xs hover:bg-slate-800/25 px-2 rounded-lg transition-colors">
+                                <div className="space-y-0.5">
+                                  <span className="font-mono text-slate-300 font-bold bg-slate-800 px-1.5 py-0.5 rounded text-[10px]">{date}</span>
+                                  <p className="text-[10px] text-slate-500 font-medium">{formattedDate}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  <span className="bg-fuchsia-500/10 text-fuchsia-400 font-mono font-black px-2 py-0.5 rounded text-[11px] border border-fuchsia-500/20">
+                                    {count} জন ভিজিটর
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Informational Guidance Alert box */}

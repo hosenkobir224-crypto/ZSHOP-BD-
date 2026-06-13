@@ -75,6 +75,13 @@ export default function App() {
     fetchProducts();
     fetchOrders();
 
+    // Track uniquely per session
+    if (!sessionStorage.getItem("zshop_visit_logged")) {
+      fetch("/api/visit", { method: "POST" })
+        .then(() => sessionStorage.setItem("zshop_visit_logged", "true"))
+        .catch(err => console.error("Error logging visit:", err));
+    }
+
     // Initialize Facebook Meta Pixel
     initMetaPixel();
 

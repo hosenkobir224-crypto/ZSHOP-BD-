@@ -70,7 +70,7 @@ export default function ProductCard({
           {product.isTrending && (
             <span className="px-1.5 py-0.5 text-[8px] font-sans font-black text-white bg-slate-950 rounded-xs uppercase tracking-wider flex items-center gap-0.5 shadow-sm">
               <ShieldCheck className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
-              <span>Mall</span>
+              <span>ZSHOP BD MALL SELLER</span>
             </span>
           )}
           {!inStock && (
