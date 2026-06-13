@@ -20,7 +20,7 @@ import {
   Camera,
   Loader2
 } from "lucide-react";
-import { Category, CartItem } from "../types";
+import { Category, CartItem, Product } from "../types";
 import { CATEGORIES } from "../data";
 
 interface NavbarProps {
@@ -31,6 +31,7 @@ interface NavbarProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onOpenProfile: () => void;
+  products: Product[];
 }
 
 export default function Navbar({
@@ -41,6 +42,7 @@ export default function Navbar({
   searchQuery,
   setSearchQuery,
   onOpenProfile,
+  products,
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
@@ -65,7 +67,7 @@ export default function Navbar({
         const response = await fetch("/api/search-by-image", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64 })
+          body: JSON.stringify({ image: base64, catalogProducts: products })
         });
         const data = await response.json();
         if (data.success && data.keywords && data.keywords.length > 0) {

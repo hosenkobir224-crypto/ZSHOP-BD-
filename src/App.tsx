@@ -431,6 +431,7 @@ export default function App() {
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onOpenProfile={() => setIsCustomerProfileOpen(true)}
+        products={products}
       />
 
       <main className="flex-1">

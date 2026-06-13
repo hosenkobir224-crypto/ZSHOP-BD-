@@ -575,7 +575,7 @@ const ai = new GoogleGenAI({
 // Image Visual Search API Route
 app.post("/api/search-by-image", async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, catalogProducts } = req.body;
     if (!image) {
       res.status(400).json({ success: false, message: "কোনো ইমেজ ফাইল পাওয়া যায়নি! Please provide a valid product image." });
       return;
@@ -600,6 +600,19 @@ app.post("/api/search-by-image", async (req, res) => {
       base64Data = parts[1];
     }
 
+    let catalogInstructions = "";
+    if (catalogProducts && Array.isArray(catalogProducts) && catalogProducts.length > 0) {
+      const simplifiedCatalog = catalogProducts.map((p: any) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category,
+        description: p.description ? p.description.substring(0, 80) + "..." : ""
+      }));
+      catalogInstructions = `\nCompare the uploaded image to this catalog list of items: \n${JSON.stringify(simplifiedCatalog)}\nDetermine if the image represents or closely matches one of these products. If there is a high-confidence match from our catalog, the VERY first keyword in the 'keywords' array MUST be the EXACT title of that matching product, and 'detectedObject' should be that product title, so a exact title text search can locate it immediately. If there is no specific product found, fallback to accurate generic categories.`;
+    }
+
+    const systemPrompt = `Analyze this product image. Your task is to identify the main customer object shown (e.g. 'watch', 'shirt', 'appliances', 'jewelry'). ${catalogInstructions} Return a JSON object with: 1. 'detectedObject': simple name in English or the exact title of the matched product. 2. 'keywords': an array of 4-6 specific search terms in both English and Bengali (e.g. ['watch', 'ঘড়ি', 'luxury', 'fittings']) to match existing products in the catalog.`;
+
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
       contents: [
@@ -609,7 +622,7 @@ app.post("/api/search-by-image", async (req, res) => {
             mimeType: mimeType
           }
         },
-        "Analyze this product image. Your task is to identify the main customer object shown (e.g. 'watch', 'shirt', 'appliances', 'jewelry'). Return a JSON object with: 1. 'detectedObject': simple name in English. 2. 'keywords': an array of 4-6 specific search terms in both English and Bengali (e.g. ['watch', 'ঘড়ি', 'luxury', 'fittings']) to match existing products in the catalog."
+        systemPrompt
       ],
       config: {
         responseMimeType: "application/json",
