@@ -68,6 +68,21 @@ export default function SearchResultsView({
     return ["all", ...Array.from(new Set(cats))];
   }, [searchQuery, products]);
 
+  // Handle Escape key closure
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSearchQuery("");
+      }
+    };
+    if (searchQuery) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [searchQuery, setSearchQuery]);
+
   if (!searchQuery) return null;
 
   // Clear search function
@@ -77,11 +92,12 @@ export default function SearchResultsView({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-md overflow-y-auto animate-fadeIn flex flex-col items-center justify-start p-4 md:p-6"
+      className="fixed inset-0 z-50 bg-slate-950/40 backdrop-blur-md overflow-y-auto animate-fadeIn flex flex-col items-center justify-start p-4 md:p-6 cursor-pointer"
       id="search-results-overlay-page"
+      onClick={handleClose}
     >
       <div 
-        className="w-full max-w-6xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-300/35 flex flex-col my-auto animate-slideUp"
+        className="w-full max-w-6xl bg-white rounded-3xl overflow-hidden shadow-2xl border border-amber-300/35 flex flex-col my-auto animate-slideUp cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Ribbon / Navigation of search page */}

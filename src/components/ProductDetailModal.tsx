@@ -260,6 +260,21 @@ export default function ProductDetailModal({
     }
   }, [product]);
 
+  // Handle keydown for Escape key closing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   // Flash Sale Timer Tick Engine
   useEffect(() => {
     const timer = setInterval(() => {
@@ -452,17 +467,18 @@ export default function ProductDetailModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto cursor-pointer"
       id="upscaled-product-portal-dialog"
       role="dialog"
       aria-modal="true"
+      onClick={onClose}
     >
       {/* Absolute background drop */}
       <div className="absolute inset-0 cursor-default" onClick={onClose} />
 
       {/* Main Container */}
       <div 
-        className="relative bg-white w-full max-w-5xl rounded-2xl md:rounded-3xl shadow-2xl z-10 flex flex-col md:max-h-[92vh] overflow-y-auto animate-fadeIn border border-slate-350"
+        className="relative bg-white w-full max-w-5xl rounded-2xl md:rounded-3xl shadow-2xl z-10 flex flex-col md:max-h-[92vh] overflow-y-auto animate-fadeIn border border-slate-350 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header navigation bar inside Modal */}
