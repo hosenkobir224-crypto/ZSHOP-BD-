@@ -798,7 +798,13 @@ export default function CustomerProfile({
           <div className="bg-slate-950 text-white flex flex-col">
             <div className="px-5 pt-4 pb-2 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-orange-500 text-white flex items-center justify-center font-display font-black text-sm">
+                <div className={`w-7 h-7 rounded-lg ${
+                  userType === "customer" 
+                    ? "bg-amber-400 text-slate-950" 
+                    : userType === "merchant"
+                      ? "bg-rose-600 text-white"
+                      : "bg-indigo-600 text-white"
+                } flex items-center justify-center font-display font-black text-sm`}>
                   Z
                 </div>
                 <div>
@@ -837,7 +843,7 @@ export default function CustomerProfile({
                 onClick={() => { setUserType("merchant"); setMode("login"); }}
                 className={`flex-1 py-3 text-[10px] sm:text-xs font-bold text-center transition-all cursor-pointer ${
                   userType === "merchant" 
-                    ? "border-b-2 border-orange-500 text-orange-500 font-extrabold" 
+                    ? "border-b-2 border-rose-500 text-rose-500 font-extrabold" 
                     : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -848,7 +854,7 @@ export default function CustomerProfile({
                 onClick={() => { setUserType("affiliate"); setMode("login"); }}
                 className={`flex-1 py-3 text-[10px] sm:text-xs font-bold text-center transition-all cursor-pointer ${
                   userType === "affiliate" 
-                    ? "border-b-2 border-emerald-400 text-emerald-400 font-extrabold" 
+                    ? "border-b-2 border-indigo-400 text-indigo-400 font-extrabold" 
                     : "text-slate-400 hover:text-white"
                 }`}
               >
@@ -864,8 +870,8 @@ export default function CustomerProfile({
                 userType === "customer" 
                   ? "bg-amber-400 text-slate-950" 
                   : userType === "merchant"
-                    ? "bg-orange-500 text-white"
-                    : "bg-emerald-500 text-white"
+                    ? "bg-rose-600 text-white"
+                    : "bg-indigo-600 text-white"
               } flex items-center justify-center font-display font-black text-sm`}>
                 {userType === "customer" ? "C" : userType === "merchant" ? "S" : "A"}
               </div>
@@ -1317,7 +1323,7 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ মোঃ আবির হোসাইন"
                         value={merchName}
                         onChange={(e) => setMerchName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
                       />
                     </div>
 
@@ -1331,7 +1337,7 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ Royal Fashion BD"
                         value={merchShopName}
                         onChange={(e) => setMerchShopName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none font-bold"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-bold"
                       />
                     </div>
 
@@ -1345,7 +1351,7 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ 01888223470"
                         value={merchPhone}
                         onChange={(e) => setMerchPhone(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
                       />
                     </div>
 
@@ -1358,7 +1364,7 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ বনানী, ঢাকা"
                         value={merchAddress}
                         onChange={(e) => setMerchAddress(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
                       />
                     </div>
 
@@ -1372,13 +1378,13 @@ export default function CustomerProfile({
                         placeholder="কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড"
                         value={merchPassword}
                         onChange={(e) => setMerchPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-[#f85606] hover:bg-[#e04d05] text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
                     >
                       Establish online Merchant Shop
                     </button>
@@ -1390,7 +1396,7 @@ export default function CustomerProfile({
                       <button 
                         type="button"
                         onClick={() => setMode("login")}
-                        className="text-[#f85606] font-bold hover:underline cursor-pointer"
+                        className="text-rose-600 font-bold hover:underline cursor-pointer"
                       >
                         মার্চেন্ট লগইন করুন
                       </button>
@@ -1431,7 +1437,7 @@ export default function CustomerProfile({
                           placeholder="como: 01888223470"
                           value={loginPhone}
                           onChange={(e) => setLoginPhone(e.target.value)}
-                          className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
+                          className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
                         />
                       </div>
                     </div>
@@ -1448,7 +1454,7 @@ export default function CustomerProfile({
                           placeholder="••••••••••••"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
-                          className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 focus:border-[#f85606] rounded-xl text-xs text-slate-800 focus:outline-none"
+                          className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
                         />
                         <button
                           type="button"
@@ -1462,7 +1468,7 @@ export default function CustomerProfile({
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-[#f85606] hover:bg-[#e04d05] text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
                     >
                       Authenticate and Access Store
                     </button>
@@ -1474,7 +1480,7 @@ export default function CustomerProfile({
                       <button 
                         type="button"
                         onClick={() => setMode("register")}
-                        className="text-[#f85606] font-bold hover:underline cursor-pointer font-sans"
+                        className="text-rose-600 font-bold hover:underline cursor-pointer font-sans"
                       >
                         নতুন মার্চেন্ট সাইন আপ (ZSHOP BD Seller Center)
                       </button>
@@ -1488,7 +1494,7 @@ export default function CustomerProfile({
                 <div className="space-y-6" id="merchant-control-panel-dashboard">
                   
                   {/* Shop Details header box */}
-                  <div className="bg-[#f85606] text-white rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden shadow-md">
+                  <div className="bg-rose-600 text-white rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden shadow-md">
                     <div className="flex items-center gap-3.5 z-10">
                       <div className="relative w-12 h-12">
                         <div className="w-full h-full bg-white/20 border border-white/30 rounded-full flex items-center justify-center overflow-hidden shrink-0">
@@ -1498,63 +1504,58 @@ export default function CustomerProfile({
                             <Store className="w-6 h-6 text-white" />
                           )}
                         </div>
-                        <label className="absolute -bottom-1 -right-1 bg-amber-500 hover:bg-amber-600 text-slate-950 p-1 rounded-full cursor-pointer shadow border border-[#f85606] flex items-center justify-center" title="ছবি পরিবর্তন করুন">
-                          <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
-                          <Camera className="w-2.5 h-2.5 text-slate-950" />
-                        </label>
                       </div>
+
                       <div className="space-y-0.5">
-                        <span className="inline-block px-1.5 py-0.5 bg-black/30 rounded text-[8px] font-mono font-bold uppercase tracking-wider">DARAZ MALL SELLER</span>
-                        <h4 className="text-sm font-display font-extrabold text-white">
-                          {activeMerchant.shopName}
-                        </h4>
-                        <p className="text-[10px] text-orange-200 font-mono">
-                          🧑 Owner: {activeMerchant.name} | 📱 ID: {activeMerchant.phone}
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-display font-black text-white uppercase tracking-wider">{activeMerchant.shopName}</h4>
+                          <span className="bg-amber-450 text-slate-900 font-extrabold text-[8px] px-1.5 py-0.2 rounded uppercase tracking-wider">ZSHOP Seller</span>
+                        </div>
+                        <p className="text-[10px] text-rose-100 flex items-center gap-1">
+                          <User className="w-3 h-3 text-rose-200" />
+                          <span>Owner: {activeMerchant.name} ({activeMerchant.phone})</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex gap-4 z-10 font-mono text-center">
-                      <div className="bg-black/20 p-2 text-white rounded-xl backdrop-blur-md shrink-0 border border-white/10 min-w-[70px]">
-                        <span className="text-[8px] uppercase tracking-wider block text-orange-200">মোট প্রোডাক্ট</span>
-                        <span className="text-xs font-black">{merchantProducts.length}</span>
-                      </div>
-                      <div className="bg-black/20 p-2 text-white rounded-xl backdrop-blur-md shrink-0 border border-white/10 min-w-[70px]">
-                        <span className="text-[8px] uppercase tracking-wider block text-orange-200">মোট সেলস্</span>
-                        <span className="text-xs font-black">৳{formatBDT(completedEarnings)}</span>
-                      </div>
+                    <div className="flex items-center gap-2 z-10">
+                      {/* Close button inside dashboard */}
+                      <button 
+                        onClick={handleLogout}
+                        className="py-1.5 px-3 bg-white/15 hover:bg-white/25 active:bg-white/35 text-white text-[10px] font-bold uppercase rounded-lg border border-white/20 hover:border-white/30 transition-all flex items-center gap-1 cursor-pointer"
+                        title="বিক্রেতা প্যানেল থেকে লগআউট"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Log Out</span>
+                      </button>
                     </div>
                   </div>
 
-                  {/* Sub-navigation tabs inside Merchant workspace */}
-                  <div className="flex bg-slate-100 p-1 rounded-xl border border-gray-200">
+                  {/* Dashboard Tab selectors */}
+                  <div className="flex bg-slate-50 border border-gray-200 rounded-xl p-1 gap-1">
                     <button 
-                      type="button"
-                      onClick={() => setMerchantTab("summary")}
-                      className={`flex-1 text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${merchantTab === "summary" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-600 hover:text-slate-900"}`}
+                      type="button" onClick={() => setMerchantTab("summary")}
+                      className={`flex-1 py-2 text-[10px] sm:text-xs font-bold text-center rounded-lg transition-all cursor-pointer ${merchantTab === "summary" ? "bg-rose-650 text-white shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
                     >
-                      📊 সামারি (Summary)
+                      📊 বিবরণী
                     </button>
                     <button 
-                      type="button"
-                      onClick={() => setMerchantTab("add")}
-                      className={`flex-1 text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${merchantTab === "add" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-600 hover:text-slate-900"}`}
+                      type="button" onClick={() => setMerchantTab("add")}
+                      className={`flex-1 py-1 text-[10px] sm:text-xs font-bold text-center rounded-lg transition-all cursor-pointer ${merchantTab === "add" ? "bg-rose-650 text-white shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
                     >
-                      ➕ নতুন প্রোডাক্ট যোগ (Add)
+                      ➕ প্রোডাক্ট যোগ
                     </button>
                     <button 
-                      type="button"
-                      onClick={() => setMerchantTab("products")}
-                      className={`flex-1 text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${merchantTab === "products" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-600 hover:text-slate-900"}`}
+                      type="button" onClick={() => setMerchantTab("products")}
+                      className={`flex-1 py-2 text-[10px] sm:text-xs font-bold text-center rounded-lg transition-all cursor-pointer ${merchantTab === "products" ? "bg-rose-650 text-white shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
                     >
-                      📦 প্রোডাক্ট কন্ট্রোল
+                      🛍️ প্রোডাক্ট তালিকা
                     </button>
                     <button 
-                      type="button"
-                      onClick={() => setMerchantTab("orders")}
-                      className={`flex-1 text-center py-2 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${merchantTab === "orders" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-600 hover:text-slate-900"}`}
+                      type="button" onClick={() => setMerchantTab("orders")}
+                      className={`flex-1 py-2 text-[10px] sm:text-xs font-bold text-center rounded-lg transition-all cursor-pointer ${merchantTab === "orders" ? "bg-rose-650 text-white shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
                     >
-                      📝 অর্ডার্স ({connectedMerchantOrders.length})
+                      📦 অর্ডার্স ({connectedMerchantOrders.length})
                     </button>
                   </div>
 
@@ -1563,7 +1564,7 @@ export default function CustomerProfile({
                     <div className="space-y-4 font-sans text-xs">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="p-4 bg-white border border-gray-200 rounded-xl flex items-center gap-3">
-                          <div className="p-2.5 bg-orange-50 text-orange-600 rounded-lg">
+                          <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg">
                             <Layers className="w-5 h-5" />
                           </div>
                           <div>
@@ -1594,11 +1595,11 @@ export default function CustomerProfile({
                       </div>
 
                       {/* Merchant operational notes */}
-                      <div className="p-3 bg-blue-50 border border-blue-100/60 rounded-xl text-blue-850 flex items-start gap-2.5">
-                        <Sparkles className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                      <div className="p-3 bg-rose-50/50 border border-rose-100 rounded-xl text-slate-700 flex items-start gap-2.5">
+                        <Sparkles className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-bold">মার্চেন্ট তথ্য:</p>
-                          <p className="mt-0.5 text-[11px] leading-relaxed text-blue-700">
+                          <p className="font-bold text-rose-900">মার্চেন্ট তথ্য:</p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-slate-600">
                             অনলাইন স্টোরে আপনার আপলোড করা প্রতিটা প্রোডাক্ট সরাসরি ZSHOP BD-এর সার্চ মেকানিজম এবং লাইভ লিস্টে যুক্ত হয়ে গেছে। গ্রাহকরা এখন সরাসরি তাদের ডিভাইস থেকে এটি কিনতে পারবেন!
                           </p>
                         </div>
@@ -1610,7 +1611,7 @@ export default function CustomerProfile({
                   {merchantTab === "add" && (
                     <form onSubmit={handleMerchantAddProduct} className="space-y-4 bg-white border border-gray-200 p-4 rounded-xl text-xs font-sans">
                       <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wide flex items-center gap-1.5 border-b pb-2">
-                        <Plus className="w-4 h-4 text-[#f85606]" />
+                        <Plus className="w-4 h-4 text-rose-600" />
                         নতুন পণ্য বিক্রির জন্য পোস্ট করুন
                       </h4>
 
@@ -1627,7 +1628,7 @@ export default function CustomerProfile({
                           <input 
                             type="text" required placeholder="যেমনঃ Premium Designer Silk Punjabi"
                             value={prodTitle} onChange={e => setProdTitle(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none"
                           />
                         </div>
 
@@ -1635,7 +1636,7 @@ export default function CustomerProfile({
                           <label className="block text-[10px] text-gray-500 font-mono tracking-wider uppercase mb-1">ক্যাটাগরি নির্ধারণ করুন *</label>
                           <select 
                             value={prodCategory} onChange={e => setProdCategory(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none"
                           >
                             <option value="clothing">Clothing & Fashion (পাঞ্জাবি ও ফ্যাশন)</option>
                             <option value="watches">Luxury Watches (লাক্সারি ঘড়ি)</option>
@@ -1652,7 +1653,7 @@ export default function CustomerProfile({
                           <input 
                             type="number" required placeholder="যেমনঃ 2450"
                             value={prodPrice} onChange={e => setProdPrice(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none font-mono"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono"
                           />
                         </div>
 
@@ -1661,7 +1662,7 @@ export default function CustomerProfile({
                           <input 
                             type="number" placeholder="যেমনঃ 3200"
                             value={prodOriginalPrice} onChange={e => setProdOriginalPrice(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none font-mono"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono"
                           />
                         </div>
                       </div>
@@ -1672,13 +1673,13 @@ export default function CustomerProfile({
                         <div className="flex border border-gray-200 rounded-lg overflow-hidden shrink-0">
                           <button 
                             type="button" onClick={() => setProdImageSource("link")}
-                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "link" ? "bg-amber-400 text-slate-900" : "bg-gray-100 text-gray-500"}`}
+                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "link" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
                           >
                             ছবি লিংক দিন
                           </button>
                           <button 
                             type="button" onClick={() => setProdImageSource("upload")}
-                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "upload" ? "bg-amber-400 text-slate-900" : "bg-gray-100 text-gray-500"}`}
+                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "upload" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
                           >
                             গ্যালারি থেকে ফটো আপলোড
                           </button>
@@ -1688,13 +1689,13 @@ export default function CustomerProfile({
                           <input 
                             type="url" placeholder="https://images.unsplash.com/photo-..."
                             value={prodImage.startsWith("data") ? "" : prodImage} onChange={e => setProdImage(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none font-mono"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono"
                           />
                         ) : (
                           <div className="flex flex-col md:flex-row items-center gap-3 p-3 bg-slate-50 border border-gray-250 rounded-xl">
                             <input 
                               type="file" accept="image/*" onChange={handleProductPhotoUpload}
-                              className="text-xs text-gray-550"
+                              className="text-xs text-gray-555"
                             />
                             {prodImage && (
                               <img src={prodImage} alt="sample" className="w-12 h-12 object-cover bg-white border rounded shadow shrink-0" />
@@ -1709,7 +1710,7 @@ export default function CustomerProfile({
                           <input 
                             type="text" placeholder="যেমনঃ S, M, L, XL"
                             value={prodSizes} onChange={e => setProdSizes(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono"
                           />
                         </div>
 
@@ -1718,7 +1719,7 @@ export default function CustomerProfile({
                           <input 
                             type="text" placeholder="যেমনঃ Black, White, Maroon"
                             value={prodColors} onChange={e => setProdColors(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none"
                           />
                         </div>
                       </div>
@@ -1728,7 +1729,7 @@ export default function CustomerProfile({
                         <textarea 
                           rows={3} placeholder="পণ্যটি সম্পর্কে বিস্তারিত বিবরণ লিখুন..."
                           value={prodDescription} onChange={e => setProdDescription(e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-[#f85606] rounded-lg focus:outline-none"
+                          className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none"
                         />
                       </div>
 
@@ -1743,7 +1744,7 @@ export default function CustomerProfile({
 
                       <button 
                         type="submit"
-                        className="w-full py-2.5 bg-[#f85606] hover:bg-[#d64a05] text-white font-black text-xs uppercase tracking-wide rounded-lg transition-colors cursor-pointer"
+                        className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs uppercase tracking-wide rounded-lg transition-colors cursor-pointer"
                       >
                         নতুন প্রোডাক্ট লাইভ করুন (Publish Product)
                       </button>
