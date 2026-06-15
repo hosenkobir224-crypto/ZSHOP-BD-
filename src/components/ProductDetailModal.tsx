@@ -260,7 +260,7 @@ export default function ProductDetailModal({
     }
   }, [product]);
 
-  // Handle keydown for Escape key closing
+  // Handle keydown for Escape key closing & Scroll viewport resetting on open
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -269,6 +269,15 @@ export default function ProductDetailModal({
     };
     if (isOpen) {
       window.addEventListener("keydown", handleKeyDown);
+      
+      // Reset scroll of the page viewport instantly so the modal does not align offset due to #root transform boundaries on mobile screens
+      window.scrollTo({ top: 0, behavior: "instant" });
+      
+      // Also reset modal container inside
+      const modalElement = document.getElementById("upscaled-product-portal-dialog");
+      if (modalElement) {
+        modalElement.scrollTop = 0;
+      }
     }
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
