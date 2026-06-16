@@ -254,7 +254,14 @@ export default function CustomerProfile({
   useEffect(() => {
     if (isOpen) {
       loadActiveSession();
+      document.body.style.overflow = "hidden";
+      window.scrollTo({ top: 0, behavior: "instant" });
+    } else {
+      document.body.style.overflow = "";
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   // Synchronize customer searches
@@ -843,7 +850,7 @@ export default function CustomerProfile({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-5 overflow-hidden" 
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-hidden" 
       id="customer-auth-portal"
       role="dialog"
       aria-modal="true"
@@ -857,14 +864,14 @@ export default function CustomerProfile({
       {/* Primary Card Frame */}
       <div className={`relative w-full bg-white border border-gray-150 shadow-2xl flex flex-col justify-between overflow-hidden text-left transition-all duration-300 ${
         mode !== "profile"
-          ? "max-w-[430px] rounded-3xl mx-4 my-auto h-auto max-h-[92vh]"
+          ? "max-w-[430px] rounded-3xl mx-auto my-auto h-auto max-h-[94vh]"
           : "h-full sm:h-[90vh] sm:max-w-5xl sm:rounded-2xl max-h-screen"
       }`}>
         
         {/* Header navigation tabs (Only in Auth login/reg view) */}
         {mode !== "profile" ? (
           <div className="bg-[#0b1329] text-white flex flex-col select-none border-b border-slate-800/20 shrink-0">
-            <div className="px-5 py-4 flex items-center justify-between">
+            <div className="px-4 py-3 sm:px-5 sm:py-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-[#f85606] text-white flex items-center justify-center font-display font-black text-[#ffffff] text-lg shadow-sm border border-[#ff6e24]/10">
                   Z
@@ -889,7 +896,7 @@ export default function CustomerProfile({
               <button 
                 type="button"
                 onClick={() => { setUserType("customer"); setMode("login"); }}
-                className={`flex-1 py-3.5 text-[11px] font-extrabold text-center transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 sm:py-3.5 text-[10px] sm:text-[11px] font-extrabold text-center transition-all cursor-pointer ${
                   userType === "customer" 
                     ? "border-b-2 border-[#facc15] text-[#facc15]" 
                     : "text-slate-400 hover:text-white"
@@ -900,7 +907,7 @@ export default function CustomerProfile({
               <button 
                 type="button"
                 onClick={() => { setUserType("merchant"); setMode("login"); }}
-                className={`flex-1 py-3.5 text-[11px] font-extrabold text-center transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 sm:py-3.5 text-[10px] sm:text-[11px] font-extrabold text-center transition-all cursor-pointer ${
                   userType === "merchant" 
                     ? "border-b-2 border-rose-500 text-rose-500" 
                     : "text-slate-400 hover:text-white"
@@ -911,7 +918,7 @@ export default function CustomerProfile({
               <button 
                 type="button"
                 onClick={() => { setUserType("affiliate"); setMode("login"); }}
-                className={`flex-1 py-3.5 text-[11px] font-extrabold text-center transition-all cursor-pointer ${
+                className={`flex-1 py-2.5 sm:py-3.5 text-[10px] sm:text-[11px] font-extrabold text-center transition-all cursor-pointer ${
                   userType === "affiliate" 
                     ? "border-b-2 border-indigo-400 text-indigo-400" 
                     : "text-slate-400 hover:text-white"
@@ -962,7 +969,7 @@ export default function CustomerProfile({
         )}
 
         {/* Content Portal Body */}
-        <div className={`flex-1 overflow-y-auto p-5 sm:p-6 transition-all duration-300 ${mode !== "profile" ? "bg-white" : "bg-slate-50/50"}`}>
+        <div className={`flex-1 overflow-y-auto ${mode !== "profile" ? "p-4 sm:p-6 bg-white" : "p-5 sm:p-6 bg-slate-50/50"} transition-all duration-300`}>
 
           {/* ================================================================ */}
           {/* ====================== CUSTOMER FLOW =========================== */}
@@ -971,9 +978,9 @@ export default function CustomerProfile({
             <>
               {/* Customer Registration */}
               {mode === "register" && (
-                <div className="space-y-6 text-slate-800 font-sans" id="customer-register-step">
-                  <div className="text-center space-y-1.5">
-                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                <div className="space-y-4 sm:space-y-5 text-slate-800 font-sans" id="customer-register-step">
+                  <div className="text-center space-y-1">
+                    <h4 className="text-base sm:text-lg font-extrabold text-[#f85606] tracking-tight">
                       নতুন গ্রাহক অ্যাকাউন্ট রেজিস্টার করুন
                     </h4>
                     <p className="text-[11px] text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
@@ -982,7 +989,7 @@ export default function CustomerProfile({
                   </div>
 
                   {regError && (
-                    <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
+                    <div className="p-3 bg-red-55/10 text-red-650 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
                       <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                       <p className="font-semibold">{regError}</p>
                     </div>
@@ -995,17 +1002,17 @@ export default function CustomerProfile({
                     </div>
                   )}
 
-                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                    <div className="border border-dashed border-gray-200 bg-slate-50/40 p-4 rounded-2xl flex flex-col items-center justify-center space-y-3">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-3 sm:space-y-4">
+                    <div className="border border-dashed border-gray-200 bg-slate-50/40 p-3 rounded-2xl flex flex-col items-center justify-center space-y-2">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono">
                         PROFILE PHOTO (প্রোফাইল ছবি)
                       </p>
                       <div className="flex items-center gap-4">
-                        <div className="relative w-14 h-14 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                        <div className="relative w-11 h-11 sm:w-14 sm:h-14 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
                           {regAvatar ? (
                             <img src={regAvatar} alt="preview" className="w-full h-full object-cover" />
                           ) : (
-                            <User className="w-6 h-6 text-gray-400" />
+                            <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
                           )}
                         </div>
                         <div className="relative">
@@ -1017,7 +1024,7 @@ export default function CustomerProfile({
                           />
                           <button
                             type="button"
-                            className="py-2 px-3.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+                            className="py-1.5 px-3 sm:py-2 sm:px-3.5 bg-[#111827] hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
                           >
                             <Upload className="w-3.5 h-3.5" />
                             <span>আপলোড করুন</span>
@@ -1027,7 +1034,7 @@ export default function CustomerProfile({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5 font-mono">
+                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1 font-mono">
                         YOUR NAME ( can be also written as "আপনার নাম" )
                       </label>
                       <input
@@ -1036,12 +1043,12 @@ export default function CustomerProfile({
                         placeholder="যেমন: মোঃ জাহিদ হাসান"
                         value={regName}
                         onChange={(e) => setRegName(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
+                        className="w-full px-3 py-2 sm:py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5 font-mono">
+                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1 font-mono">
                         PHONE NUMBER ( Can be also written as "মোবাইল নম্বর" )
                       </label>
                       <input
@@ -1050,12 +1057,12 @@ export default function CustomerProfile({
                         placeholder="যেমন: 01712345678"
                         value={regPhone}
                         onChange={(e) => setRegPhone(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none font-mono transition-all"
+                        className="w-full px-3 py-2 sm:py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1.5 font-mono">
+                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider uppercase mb-1 font-mono">
                         PASSWORD ( can be also written as "পাসওয়ার্ড" )
                       </label>
                       <input
@@ -1064,19 +1071,19 @@ export default function CustomerProfile({
                         placeholder="কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড"
                         value={regPassword}
                         onChange={(e) => setRegPassword(e.target.value)}
-                        className="w-full px-4 py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
+                        className="w-full px-3 py-2 sm:py-3 bg-white border border-gray-200 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3.5 bg-[#facc15] hover:bg-amber-400 text-slate-950 font-sans font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer shadow-md text-center active:scale-[0.98]"
+                      className="w-full py-2.5 sm:py-3.5 bg-[#facc15] hover:bg-amber-400 text-slate-950 font-sans font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer shadow-md text-center active:scale-[0.98]"
                     >
                       CREATE CUSTOMER ACCOUNT
                     </button>
                   </form>
 
-                  <div className="border-t border-gray-100 pt-4 text-center mt-3">
+                  <div className="border-t border-gray-100 pt-3 sm:pt-4 text-center mt-1.5 sm:mt-3">
                     <p className="text-xs text-slate-600 font-sans font-medium">
                       ইতিমধ্যে অ্যাকাউন্ট আছে? {" "}
                       <button 
@@ -1093,9 +1100,9 @@ export default function CustomerProfile({
 
               {/* Customer Login */}
               {mode === "login" && (
-                <div className="space-y-6 text-slate-800 font-sans" id="customer-login-step">
-                  <div className="text-center space-y-1.5">
-                    <h4 className="text-lg font-extrabold text-slate-900 tracking-tight">
+                <div className="space-y-4 sm:space-y-6 text-slate-800 font-sans" id="customer-login-step">
+                  <div className="text-center space-y-1">
+                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
                       গ্রাহক লগইন
                     </h4>
                     <p className="text-[11px] text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
@@ -1110,57 +1117,57 @@ export default function CustomerProfile({
                     </div>
                   )}
 
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
+                  <form onSubmit={handleLoginSubmit} className="space-y-3 sm:space-y-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider text-left uppercase mb-1.5 font-mono">
+                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider text-left uppercase mb-1 font-mono">
                         PHONE IDENTIFICATION (মোবাইল নম্বর)
                       </label>
                       <div className="relative">
-                        <Smartphone className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400" />
+                        <Smartphone className="absolute left-3 top-2.5 sm:top-3.5 w-4 sm:w-4.5 h-4 sm:h-4.5 text-slate-400" />
                         <input
                           type="text"
                           required
                           placeholder="como: 01712345678"
                           value={loginPhone}
                           onChange={(e) => setLoginPhone(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-150 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none font-mono transition-all"
+                          className="w-full pl-9 pr-4 py-2 sm:py-3 bg-white border border-gray-150 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none font-mono transition-all"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider text-left uppercase mb-1.5 font-mono">
+                      <label className="block text-[10px] font-bold text-slate-500 tracking-wider text-left uppercase mb-1 font-mono">
                         VERIFY PASSWORD (পাসওয়ার্ড)
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3.5 top-3.5 w-4.5 h-4.5 text-slate-400" />
+                        <Lock className="absolute left-3 top-2.5 sm:top-3.5 w-4 sm:w-4.5 h-4 sm:h-4.5 text-slate-400" />
                         <input
                           type={showPassword ? "text" : "password"}
                           required
                           placeholder="••••••••••••"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
-                          className="w-full pl-11 pr-11 py-3 bg-white border border-gray-150 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
+                          className="w-full pl-9 pr-9 py-2 sm:py-3 bg-white border border-gray-150 focus:border-[#ffad00] focus:ring-1 focus:ring-[#ffad00] rounded-2xl text-xs text-slate-800 focus:outline-none transition-all"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer transition-all active:scale-95"
+                          className="absolute right-3 top-2.5 sm:top-3.5 text-slate-400 hover:text-slate-600 cursor-pointer transition-all active:scale-95"
                         >
-                          {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                          {showPassword ? <EyeOff className="w-4 sm:w-4.5 h-4 sm:h-4.5" /> : <Eye className="w-4 sm:w-4.5 h-4 sm:h-4.5" />}
                         </button>
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3.5 bg-[#facc15] hover:bg-amber-400 text-slate-950 font-sans font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer shadow-md text-center active:scale-[0.98]"
+                      className="w-full py-2.5 sm:py-3.5 bg-[#facc15] hover:bg-amber-400 text-slate-950 font-sans font-black text-xs uppercase tracking-widest rounded-2xl transition-all cursor-pointer shadow-md text-center active:scale-[0.98]"
                     >
                       VERIFY AND LOGIN ACCOUNT
                     </button>
                   </form>
 
-                  <div className="border-t border-gray-100 pt-4 text-center mt-3">
+                  <div className="border-t border-gray-100 pt-3 sm:pt-4 text-center mt-1.5 sm:mt-3">
                     <p className="text-xs text-slate-700 font-sans font-medium">
                       নতুন গ্রাহক? {" "}
                       <button 
@@ -2016,18 +2023,18 @@ export default function CustomerProfile({
             <>
               {/* Merchant Registration */}
               {mode === "register" && (
-                <div className="space-y-5" id="merchant-register-step">
-                  <div className="text-center space-y-1">
+                <div className="space-y-3 sm:space-y-4" id="merchant-register-step">
+                  <div className="text-center space-y-0.5">
                     <h4 className="text-sm font-display font-bold text-[#f85606] uppercase tracking-wide">
                       ZSHOP BD Seller Registration (মার্চেন্ট অ্যাকাউন্ট খুলুন)
                     </h4>
-                    <p className="text-[11px] text-gray-500 font-sans">
+                    <p className="text-[11px] text-gray-500 font-sans leading-tight">
                       আপনার নিজস্ব দোকান খুলে সরাসরি কাস্টমারের কাছে প্রোডাক্ট বিক্রি শুরু করুন!
                     </p>
                   </div>
 
                   {merchError && (
-                    <div className="p-3 bg-red-50 text-red-650 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
+                    <div className="p-3 bg-red-55/10 text-red-650 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
                       <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                       <p className="font-semibold">{merchError}</p>
                     </div>
@@ -2040,15 +2047,15 @@ export default function CustomerProfile({
                     </div>
                   )}
 
-                  <form onSubmit={handleMerchantRegisterSubmit} className="space-y-4">
-                    <div className="flex flex-col items-center justify-center p-3 border border-dashed border-gray-200 rounded-xl bg-white space-y-2">
-                      <p className="text-[10px] uppercase font-mono tracking-wider text-gray-400 font-bold">Shop Avatar (দোকানের লোগো)</p>
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-14 h-14 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                  <form onSubmit={handleMerchantRegisterSubmit} className="space-y-2.5 sm:space-y-3">
+                    <div className="flex flex-col items-center justify-center p-2 border border-dashed border-gray-200 rounded-xl bg-slate-50/40 space-y-1">
+                      <p className="text-[9px] uppercase font-mono tracking-wider text-gray-400 font-bold">Shop Avatar (দোকানের লোগো)</p>
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-11 h-11 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
                           {merchAvatar ? (
                             <img src={merchAvatar} alt="preview" className="w-full h-full object-cover" />
                           ) : (
-                            <Store className="w-6 h-6 text-gray-400" />
+                            <Store className="w-5 h-5 text-gray-400" />
                           )}
                         </div>
                         <div className="relative">
@@ -2060,9 +2067,9 @@ export default function CustomerProfile({
                           />
                           <button
                             type="button"
-                            className="py-1.5 px-3 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-850 flex items-center gap-1 cursor-pointer"
+                            className="py-1 px-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 flex items-center gap-1 cursor-pointer transition-all"
                           >
-                            <Upload className="w-3.5 h-3.5" />
+                            <Upload className="w-3 h-3" />
                             <span>আপলোড করুন</span>
                           </button>
                         </div>
@@ -2070,7 +2077,7 @@ export default function CustomerProfile({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Seller / Owner Name (বিক্রেতার নাম)
                       </label>
                       <input
@@ -2079,12 +2086,12 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ মোঃ আবির হোসাইন"
                         value={merchName}
                         onChange={(e) => setMerchName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5 font-bold">
                         Shop Name / Brand Name (অনলাইন দোকান/ব্র্যান্ডের নাম) *
                       </label>
                       <input
@@ -2093,12 +2100,12 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ Royal Fashion BD"
                         value={merchShopName}
                         onChange={(e) => setMerchShopName(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-bold"
+                        className="w-full px-3 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-bold transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5 font-bold">
                         Merchant Mobile Phone (লগইন নম্বর) *
                       </label>
                       <input
@@ -2107,12 +2114,12 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ 01888223470"
                         value={merchPhone}
                         onChange={(e) => setMerchPhone(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
+                        className="w-full px-3 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Address / Warehouse (ঠিকানা/অফিস)
                       </label>
                       <input
@@ -2120,12 +2127,12 @@ export default function CustomerProfile({
                         placeholder="যেমনঃ বনানী, ঢাকা"
                         value={merchAddress}
                         onChange={(e) => setMerchAddress(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Merchant Login Password (মার্চেন্ট পাসওয়ার্ড) *
                       </label>
                       <input
@@ -2134,25 +2141,25 @@ export default function CustomerProfile({
                         placeholder="কমপক্ষে ৪ অক্ষরের পাসওয়ার্ড"
                         value={merchPassword}
                         onChange={(e) => setMerchPassword(e.target.value)}
-                        className="w-full px-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
+                        className="w-full px-3 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none transition-all"
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                      className="w-full py-2 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                     >
                       Establish online Merchant Shop
                     </button>
                   </form>
 
-                  <div className="border-t border-gray-150 pt-3 text-center">
-                    <p className="text-xs text-gray-555">
+                  <div className="border-t border-gray-150 pt-2 text-center mt-1 sm:mt-2">
+                    <p className="text-xs text-gray-500">
                       ইতিমধ্যে মার্চেন্ট হ্যান্ডেল আছে? {" "}
                       <button 
                         type="button"
                         onClick={() => setMode("login")}
-                        className="text-rose-600 font-bold hover:underline cursor-pointer"
+                        className="text-rose-600 font-bold hover:underline cursor-pointer ml-1"
                       >
                         মার্চেন্ট লগইন করুন
                       </button>
@@ -2163,12 +2170,12 @@ export default function CustomerProfile({
 
               {/* Merchant Login */}
               {mode === "login" && (
-                <div className="space-y-5" id="merchant-login-step">
-                  <div className="text-center space-y-1">
+                <div className="space-y-3 sm:space-y-4" id="merchant-login-step">
+                  <div className="text-center space-y-0.5">
                     <h4 className="text-sm font-display font-bold text-slate-900 uppercase tracking-wide">
                       ZSHOP BD Seller Center (অনলাইন বিক্রেতা লগইন)
                     </h4>
-                    <p className="text-[11px] text-gray-500 font-sans">
+                    <p className="text-[11px] text-gray-500 font-sans leading-tight">
                       মোবাইল নম্বর ও বিক্রেতা পাসওয়ার্ড দিয়ে আপনার মার্চেন্ট প্যানেলে প্রবেশ করুন
                     </p>
                   </div>
@@ -2180,42 +2187,42 @@ export default function CustomerProfile({
                     </div>
                   )}
 
-                  <form onSubmit={handleMerchantLoginSubmit} className="space-y-4">
+                  <form onSubmit={handleMerchantLoginSubmit} className="space-y-3 sm:space-y-4">
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Seller Registration Phone (বিক্রেতার মোবাইল নম্বর)
                       </label>
                       <div className="relative">
-                        <Smartphone className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                        <Smartphone className="absolute left-3 top-2.5 sm:top-3 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           required
                           placeholder="como: 01888223470"
                           value={loginPhone}
                           onChange={(e) => setLoginPhone(e.target.value)}
-                          className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
+                          className="w-full pl-9 pr-3.5 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none font-mono transition-all"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Seller Center Password (বিক্রেতার পাসওয়ার্ড)
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                        <Lock className="absolute left-3 top-2.5 sm:top-3 w-4 h-4 text-gray-400" />
                         <input
                           type={showPassword ? "text" : "password"}
                           required
                           placeholder="••••••••••••"
                           value={loginPassword}
                           onChange={(e) => setLoginPassword(e.target.value)}
-                          className="w-full pl-10 pr-10 py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none"
+                          className="w-full pl-9 pr-9 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-rose-500 rounded-xl text-xs text-slate-800 focus:outline-none transition-all"
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
+                          className="absolute right-3 top-2.5 sm:top-3 text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -2224,19 +2231,19 @@ export default function CustomerProfile({
 
                     <button
                       type="submit"
-                      className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
+                      className="w-full py-2 sm:py-3 bg-rose-600 hover:bg-rose-700 text-white font-display font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                     >
                       Authenticate and Access Store
                     </button>
                   </form>
 
-                  <div className="border-t border-gray-150 pt-3 text-center">
-                    <p className="text-xs text-gray-555">
+                  <div className="border-t border-gray-150 pt-2 text-center mt-1 sm:mt-2">
+                    <p className="text-xs text-gray-500">
                       অনলাইন দোকান দিতে চান? {" "}
                       <button 
                         type="button"
                         onClick={() => setMode("register")}
-                        className="text-rose-600 font-bold hover:underline cursor-pointer font-sans"
+                        className="text-rose-600 font-bold hover:underline cursor-pointer font-sans ml-1"
                       >
                         নতুন মার্চেন্ট সাইন আপ (ZSHOP BD Seller Center)
                       </button>
@@ -3062,124 +3069,20 @@ export default function CustomerProfile({
                                             className="w-10 bg-transparent text-rose-600 font-bold text-center py-0 p-0 border-none focus:outline-none"
                                           />
                                         </div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              <button 
-                                type="button" onClick={() => handleMerchantDeleteProduct(p.id)}
-                                className="p-2 bg-red-50 hover:bg-red-100 text-rose-650 hover:text-rose-700 hover:border-red-250 border border-transparent rounded-lg cursor-pointer transition-colors shrink-0"
-                                title="পণ্যটি মুছে ফেলুন (Delete Product)"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* TAB 4: SHOP INCOMING CUSTOMER ORDERS */}
-                  {merchantTab === "orders" && (
-                    <div className="space-y-3 font-sans text-xs">
-                      <h4 className="text-xs font-bold text-gray-750 uppercase flex items-center justify-between">
-                        <span>আপনার স্টোরের কাস্টমার অর্ডার তালিকা ({connectedMerchantOrders.length})</span>
-                      </h4>
-
-                      {connectedMerchantOrders.length === 0 ? (
-                        <div className="bg-white border border-gray-200 p-8 rounded-xl text-center text-slate-450 text-[11px]">
-                          আপনার পণ্যের ওপর এখন পর্যন্ত কোনো অর্ডার আসে নি।
-                        </div>
-                      ) : (
-                        <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
-                          {connectedMerchantOrders.map((ord) => {
-                            // Filter only products belonging to this seller in this order
-                            const shopCartItems = ord.cartItems.filter(item => 
-                              merchantProducts.some(p => p.id === item.productId)
-                            );
-                            const totalShopEarnings = shopCartItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-
-                            return (
-                              <div key={ord.id} className="bg-white p-3 border border-gray-250 rounded-xl space-y-2 shadow-xs text-[11px]">
-                                <div className="flex items-center justify-between font-mono font-bold">
-                                  <div>
-                                    <p className="text-slate-900 text-[11px]">OrderID: <span className="text-[#f85606]">{ord.id}</span></p>
-                                    <p className="text-[9px] text-gray-400 font-normal">{new Date(ord.timestamp).toLocaleDateString()}</p>
-                                  </div>
-                                  <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider
-                                    ${ord.status === "Pending" ? "bg-amber-100 text-amber-800" : ""}
-                                    ${ord.status === "Confirmed" ? "bg-emerald-100 text-emerald-800" : ""}
-                                    ${ord.status === "Shipped" ? "bg-indigo-150 text-indigo-800" : ""}
-                                    ${ord.status === "Delivered" ? "bg-cyan-100 text-cyan-800" : ""}
-                                    ${ord.status === "Cancelled" ? "bg-rose-100 text-rose-800" : ""}
-                                  `}>
-                                    {ord.status}
-                                  </span>
-                                </div>
-
-                                <div className="space-y-1 bg-slate-50 p-2 rounded-lg border border-gray-150">
-                                  <p className="font-semibold text-slate-800 text-[10px] uppercase font-mono">গ্রাহক বিবরণ (Shipping Info):</p>
-                                  <p className="font-medium text-slate-900">Name: <span className="font-normal">{ord.customerName}</span></p>
-                                  <p className="font-medium text-slate-900">Contact: <span className="font-normal">{ord.phone}</span></p>
-                                  <p className="font-medium text-slate-900">Address: <span className="font-normal">{ord.deliveryAddress} ({ord.district})</span></p>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <p className="font-semibold text-slate-400 text-[9px] uppercase font-mono">অর্ডার আইটেম (Ordered Items):</p>
-                                  {shopCartItems.map((item, idx) => (
-                                    <div key={idx} className="flex justify-between items-center text-slate-800">
-                                      <p className="truncate pr-4 flex-1">{item.title}</p>
-                                      <p className="shrink-0 font-mono font-bold">Qty {item.quantity} × ৳{formatBDT(item.price)}</p>
-                                    </div>
-                                  ))}
-                                </div>
-
-                                <div className="flex justify-between items-center font-bold border-t border-dashed pt-1.5">
-                                  <span className="text-gray-450 font-normal">Merchant Receivable Amount:</span>
-                                  <span className="text-emerald-650">৳{formatBDT(totalShopEarnings)}</span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <button
-                    onClick={handleLogout}
-                    className="w-full py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-display font-bold text-xs uppercase tracking-wider rounded-xl transition-colors flex items-center justify-center gap-1.5 cursor-pointer border border-rose-150"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>विक्रेতা লগ আউট (Logout Seller Center)</span>
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ================================================================ */}
-          {/* ====================== AFFILIATE FLOW ========================== */}
-          {/* ================================================================ */}
-          {userType === "affiliate" && (
-            <>
-              {/* Affiliate Registration */}
+                                                  {/* Affiliate Registration */}
               {mode === "register" && (
-                <div className="space-y-5" id="affiliate-register-step">
-                  <div className="text-center space-y-1">
+                <div className="space-y-3 sm:space-y-4" id="affiliate-register-step">
+                  <div className="text-center space-y-0.5">
                     <h4 className="text-sm font-display font-bold text-emerald-500 uppercase tracking-wide">
                       ZSHOP BD Affiliate Account (এফিলিয়েট পার্টনার অ্যাকাউন্ট খুলুন)
                     </h4>
-                    <p className="text-[11px] text-gray-500 font-sans">
+                    <p className="text-[11px] text-gray-500 font-sans leading-tight">
                       আমাদের যেকোনো প্রোডাক্ট শেয়ার করে প্রতি সেলে আকর্ষণীয় কমিশন ইনকাম করুন!
                     </p>
                   </div>
 
                   {affError && (
-                    <div className="p-3 bg-red-50 text-red-650 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
+                    <div className="p-3 bg-red-55/10 text-red-650 text-xs rounded-xl flex items-center gap-2.5 border border-red-100">
                       <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                       <p className="font-semibold">{affError}</p>
                     </div>
@@ -3192,15 +3095,15 @@ export default function CustomerProfile({
                     </div>
                   )}
 
-                  <form onSubmit={handleAffiliateRegisterSubmit} className="space-y-4">
-                    <div className="flex flex-col items-center justify-center p-3 border border-dashed border-gray-200 rounded-xl bg-white space-y-2">
-                      <p className="text-[10px] uppercase font-mono tracking-wider text-gray-400 font-bold">Affiliate Avatar (আপনার ছবি)</p>
-                      <div className="flex items-center gap-4">
-                        <div className="relative w-14 h-14 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                  <form onSubmit={handleAffiliateRegisterSubmit} className="space-y-2.5 sm:space-y-3">
+                    <div className="flex flex-col items-center justify-center p-2 border border-dashed border-gray-200 rounded-xl bg-slate-50/40 space-y-1">
+                      <p className="text-[9px] uppercase font-mono tracking-wider text-gray-400 font-bold">Affiliate Avatar (আপনার ছবি)</p>
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-11 h-11 bg-gray-100 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
                           {affAvatar ? (
                             <img src={affAvatar} alt="preview" className="w-full h-full object-cover" />
                           ) : (
-                            <User className="w-6 h-6 text-gray-400" />
+                            <User className="w-5 h-5 text-gray-400" />
                           )}
                         </div>
                         <div className="relative">
@@ -3212,9 +3115,9 @@ export default function CustomerProfile({
                           />
                           <button
                             type="button"
-                            className="py-1.5 px-3 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-850 flex items-center gap-1 cursor-pointer"
+                            className="py-1 px-2.5 bg-slate-900 text-white rounded-lg text-[11px] font-bold hover:bg-slate-800 flex items-center gap-1 cursor-pointer transition-all"
                           >
-                            <Upload className="w-3.5 h-3.5" />
+                            <Upload className="w-3 h-3" />
                             <span>আপলোড করুন</span>
                           </button>
                         </div>
@@ -3222,24 +3125,41 @@ export default function CustomerProfile({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
                         Full Name (আপনার পূর্ণ নাম)
                       </label>
                       <div className="relative">
-                        <User className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
+                        <User className="absolute left-3 top-2 sm:top-2.5 w-4 h-4 text-gray-400" />
                         <input
                           type="text"
                           required
                           placeholder="যেমন: Kabir Hosen"
                           value={affName}
                           onChange={(e) => setAffName(e.target.value)}
-                          className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-200 focus:border-emerald-400 rounded-xl text-xs text-slate-800 focus:outline-none"
+                          className="w-full pl-9 pr-3.5 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-emerald-400 rounded-xl text-xs text-slate-800 focus:outline-none transition-all"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono tracking-wider text-gray-500 uppercase mb-1">
+                      <label className="block text-[9px] font-mono tracking-wider text-gray-500 uppercase mb-0.5">
+                        Mobile Number (মোবাইল নম্বর - যা এফিলিয়েট আইডি হিসেবে কাজ করবে)
+                      </label>
+                      <div className="relative">
+                        <Smartphone className="absolute left-3 top-2 sm:top-2.5 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="যে�              )}
+
+              {/* Affiliate Dashboard Area */}="text-emerald-500 font-bold hover:underline cursor-pointer font-sans ml-1"
+                      >
+                        এখানে এফিলিয়েট অ্যাকাউন্ট সাইন আপ করুন
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}ext-gray-500 uppercase mb-1">
                         Mobile Number (মোবাইল নম্বর - যা এফিলিয়েট আইডি হিসেবে কাজ করবে)
                       </label>
                       <div className="relative">
