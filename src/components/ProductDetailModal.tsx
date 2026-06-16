@@ -23,7 +23,12 @@ import {
   CheckCircle2,
   Info,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MoreHorizontal,
+  Home,
+  SlidersHorizontal,
+  Compass,
+  Play
 } from "lucide-react";
 import { Product } from "../types";
 
@@ -49,6 +54,7 @@ interface ProductDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddToCartWithSpecs: (product: Product, quantity: number, color?: string, size?: string) => void;
+  onBuyNowWithSpecs?: (product: Product, quantity: number, color?: string, size?: string) => void;
   products?: Product[]; // Pass full products catalog for related recommendations
   onSelectProduct?: (product: Product) => void; // Support swapping active product
 }
@@ -58,6 +64,7 @@ export default function ProductDetailModal({
   isOpen,
   onClose,
   onAddToCartWithSpecs,
+  onBuyNowWithSpecs,
   products = [],
   onSelectProduct,
 }: ProductDetailModalProps) {
@@ -71,15 +78,16 @@ export default function ProductDetailModal({
   // Gallery Active View
   const [activeImage, setActiveImage] = useState<string>("");
   const [activeThumbId, setActiveThumbId] = useState<string>("thumb-1");
+  const [activeIndex, setActiveIndex] = useState<number>(0);
 
-  // Tab State
+  // Floating/Expanded detail tab
   const [activeTab, setActiveTab] = useState<"detail" | "specs" | "qa" | "reviews">("detail");
 
-  // Timer values
+  // Timer values for flash urgencies
   const [countdown, setCountdown] = useState({ hrs: 2, mins: 45, secs: 19 });
 
   // Delivery estimation state
-  const [selectedDistrict, setSelectedDistrict] = useState<string>("dhaka");
+  const [selectedDistrict, setSelectedDistrict] = useState<string>("chittagong"); // Bayezid Bostami is in Chittagong!
 
   // Reviews states
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -98,6 +106,35 @@ export default function ProductDetailModal({
   // Social share link feedback
   const [copiedLink, setCopiedLink] = useState(false);
 
+  // Cart Status Counter state
+  const [cartCount, setCartCount] = useState<number>(0);
+
+  // Load and read Cart items count to make red badge feel realistic!
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateCartCount = () => {
+      try {
+        const raw = localStorage.getItem("zshop_bd_cart_v1");
+        if (raw) {
+          const items = JSON.parse(raw);
+          if (Array.isArray(items)) {
+            setCartCount(items.reduce((acc, curr) => acc + curr.quantity, 0));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener("zshop_bd_cart_update", updateCartCount);
+    return () => {
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("zshop_bd_cart_update", updateCartCount);
+    };
+  }, [isOpen]);
+
   // Dynamic Specifications Generator based on product category
   const specifications = useMemo(() => {
     if (!product) return [];
@@ -105,7 +142,6 @@ export default function ProductDetailModal({
     const common = [
       { label: "ব্র্যান্ড (Brand)", value: product.isTrending ? "ZSHOP BD MALL SELLER" : "ZSHOP Core Exclusive" },
       { label: "প্রোডাক্ট আইডি (Product ID)", value: `#ZSP-${product.id.toUpperCase()}` },
-      { label: "ক্যাটাগরি (Category)", value: product.category === "clothing" ? "পোশাক ও ফ্যাশন (Apparel)" : product.category === "watches" ? "লাক্সারি টাইমপিস (Premium watches)" : product.category === "electronics" ? "স্মার্ট অ্যাক্সেসরিজ (Electronics)" : product.category === "kitchen" ? "হোম ও কিচেন (Home utilities)" : "স্পোর্টিং আইটেম (Sports & fitness)" },
     ];
 
     switch (product.category) {
@@ -114,41 +150,27 @@ export default function ProductDetailModal({
           ...common,
           { label: "মেটেরিয়াল (Material)", value: "মেডিকেটেড লাক্সারি কটন ও ডাইং লিনেন ফেস" },
           { label: "ফিটিং টাইপ (Fitting Type)", value: "সেমি-ফিট স্টাইলিশ কমফোর্ট" },
-          { label: "কালার গ্যারান্টি (Color Guarantee)", value: "১০০% লাইফটাইম কালার ব্ল্যাকআউট পলিসি" },
-          { label: "উৎপাদনকারী দেশ (Origin)", value: "বাংলাদেশ (ZSHOP ইন-হাউজ ডিজাইনার্স)" },
-          { label: "পরিষ্কারের নিয়ম (Wash instructions)", value: "হালকা ওয়াশ অথবা ড্রাই ওয়াশ রিকমেন্ডেড" },
+          { label: "কালার গ্যারান্টি (Color)", value: "১০০% লাইফটাইম কালার ব্ল্যাকআউট পলিসি" },
+          { label: "উৎপাদনকারী দেশ (Origin)", value: "বাংলাদেশ (ZSHOP ইন-হাউজ)" },
         ];
       case "watches":
         return [
           ...common,
           { label: "মুভমেন্ট (Engine)", value: "হাই-গ্রেড জাপানি ক্রনোগ্রাফ কোয়ার্টজ ক্রু" },
           { label: "ডায়াল গ্লাস (Glass Dial)", value: "স্যাফায়ার অ্যান্টি-স্ক্র্যাচ রেজিস্ট্যান্ট সারফেস" },
-          { label: "বেল্ট ডিজাইন (Strap Material)", value: "প্রিমিয়াম বাছুরের চামড়ার বেল্ট (Genuine Polish Leather)" },
-          { label: "ওয়াটার রেজিস্ট্যান্স (Water Resistance)", value: "3 ATM মাইনর ওয়াটার স্প্ল্যাশ প্রুফ" },
-          { label: "ওয়ারেন্টি (Warranty Service)", value: "১ বছরের ZSHOP ব্র্যান্ড টেক ওয়ারেন্টি" },
+          { label: "বেল্ট ডিজাইন (Strap Material)", value: "প্রিমিয়াম বাছুরের চামড়ার বেল্ট (Genuine Leather)" },
         ];
       case "electronics":
         return [
           ...common,
-          { label: "ব্লুটুথ ভার্সন (Bluetooth)", value: "কোয়ালকম Bluetooth v5.3 প্লাস ফাস্ট চিপসেট" },
-          { label: "ব্যাটারি পারফরম্যান্স (Battery)", value: "টানা ৩৬ ঘণ্টা পর্যন্ত অ্যাক্টিভ প্লেব্যাক ও ফাস্ট চার্জ" },
+          { label: "ব্লুটুথ ভার্সন (Bluetooth)", value: "Qualcomm Bluetooth v5.3 প্লাস ফাস্ট চিপসেট" },
+          { label: "ব্যাটারি পারফরম্যান্স (Battery)", value: "টানা ৩৬ ঘণ্টা পর্যন্ত অ্যাক্টিভ প্লেব্যাক" },
           { label: "সাউন্ড মেকানিজম (Acoustic)", value: "৪০ মিমি ডুয়াল মেগা-বাস ড্রাইভার মেকানিক্যাল টিউনিং" },
-          { label: "কন্ট্রোল ট্র্যাকার (Waterproof)", value: "IPX6 রেইন ও সোয়েট প্রুফ ডিজাইন" },
-          { label: "ওয়ারেন্টি (Warranty Support)", value: "৬ মাসের ডাইরেক্ট ZSHOP রিপ্লেসমেন্ট গ্যারান্টি" },
-        ];
-      case "kitchen":
-        return [
-          ...common,
-          { label: "সুরক্ষা কোটিং (Safety Body)", value: "ফুড-গ্রেড ৩১৬ স্টেইনলেস স্টিল ও বিপিএ-মুক্ত ফাইবার" },
-          { label: "মোটর ওয়াট (Power Limit)", value: "১২০০ ওয়াট থার্মোস্ট্যাটিক পাওয়ার সেভিং ইঞ্জিন" },
-          { label: "ধারনক্ষমতা (Usable Space)", value: "৩.০ লিটার লার্জ ফ্যামিলি বাস্কেট ফ্রেম" },
-          { label: "নিরাপত্তা ফিচার (Safety Systems)", value: "স্বয়ংক্রিয় অভারহিট অফ কন্ট্রোলার ও স্মার্ট লক" },
-          { label: "ওয়ারেন্টি (Engine Warranty)", value: "১ বছরের অফিসিয়াল মোটর গ্যারান্টি" },
         ];
       default:
         return [
           ...common,
-          { label: "উৎপাদনকারী বা সোর্স (Vouched)", value: "ZSHOP সার্টিফাইড ক্লাউড মার্চেন্ট" },
+          { label: "উৎপাদনকারী বা সোর্স (Vouched)", value: "ZSHOP BD Certified Mall Seller" },
           { label: "প্যাকেজিং স্ট্যান্ডার্ড (Pack Type)", value: "সিলড প্রিমিয়াম গিফট রিল বক্স প্রটেকশনসহ" },
         ];
     }
@@ -159,17 +181,17 @@ export default function ProductDetailModal({
     return [
       {
         id: `rev-def-1-${productId}`,
-        name: "আরিফুল ইসলাম",
+        name: "রাসেল চৌধুরী",
         rating: 5,
-        comment: "অসাধারণ কোয়ালিটি! ডেলিভারিও অনেক দ্রুত পেয়েছি। ঠিক যেমন ছবিতে দেখেছি তেমনই অরিজিনাল পণ্য পেয়েছি। ৫-এ ৫ স্টার দিলাম।",
-        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toLocaleDateString("bn-BD"),
+        comment: "অসাধারণ কোয়ালিটি! ডেলিভারিও অনেক দ্রুত পেয়েছি। ছবিতে যেমন দেখেছি অরিজিনাল ফ্যান একদম সেইম পেয়েছি। অনেক বাতাস দেয় এবং ডিজিটাল স্ক্রীনের চার্জ দেখায়। ৫-এ ৫ স্টার দিলাম।",
+        date: new Date(Date.now() - 3 * 24 * 60 * 65 * 1000).toLocaleDateString("bn-BD"),
         image: ""
       },
       {
         id: `rev-def-2-${productId}`,
-        name: "নাসরিন রহমান",
+        name: "শারমীন আকতার",
         rating: 4,
-        comment: "অনেক ভালো এবং প্রিমিয়াম প্রডাক্ট। ফিনিশিং এবং মেটেরিয়াল যথেষ্ট নিখুঁত ও মজবুত। ধন্যবাদ ZSHOP BD অরিジナাল পণ্য সরবরাহ করার জন্য। সাজেস্টেড!",
+        comment: "অনেক ভালো এবং প্রিমিয়াম ডিজাইন। ফিনিশিং চমৎকার, গলায় ঝুলিয়ে সহজেই ব্যবহার করা যায়। থ্যাংক ইউ ZSHOP!",
         date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toLocaleDateString("bn-BD"),
         image: ""
       }
@@ -181,16 +203,16 @@ export default function ProductDetailModal({
     return [
       {
         id: `qa-def-1-${productId}`,
-        senderName: "তানভীর আহমেদ",
-        query: "আমি যদি ঢাকার বাইরে থাকি, অর্ডারের পর ডেলিভারি কত দিনের ভেতর পাবো? আর ক্যাশ অন কি পাওয়া যাবে?",
-        reply: "ধন্যবাদ ভাইয়া। ঢাকার বাইরে আমরা সুন্দরবন বা রেডেক্স কুরিয়ারের মাধ্যমে ক্যাশ অন ডেলিভারি (COD) দিয়ে থাকি। ৩ থেকে ৫ দিনের মধ্যে পেয়ে যাবেন।",
+        senderName: "মোহাম্মদ রিফাত",
+        query: "আমি যদি চট্টগ্রামে থাকি, অর্ডারের পর ডেলিভারি কত দিনের ভেতর পাবো? আর ক্যাশ অন কি পাওয়া যাবে?",
+        reply: "ধন্যবাদ ভাইয়া। চট্টগ্রামে আমরা ২৪ ঘণ্টার স্পেশাল কন্ডিশনে ক্যাশ অন ডেলিভারি (COD) দিয়ে থাকি। ১ থেকে ২ দিনের মধ্যে দ্রুত পেয়ে যাবেন।",
         date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleDateString("bn-BD")
       },
       {
         id: `qa-def-2-${productId}`,
-        senderName: "সাবিনা ইয়াসমিন",
-        query: "সাইজে কোনো সমস্যা হলে কি চেঞ্জ বা এক্সচেঞ্জ করার সুযোগ আছে?",
-        reply: "জি অবশ্যই আপু! আমাদের ৭ দিনের ইজি এক্সচেঞ্জ পলিসি আছে। ডেলিভারি পাওয়ার পর অক্ষত অবস্থায় ছবি তুলে আমাদের জানালে সাইজ পরিবর্তন করে দেওয়া হবে।",
+        senderName: "নাইমা রহমান",
+        query: "কালার কি ফেড হয়ে যাবে? কোনো গ্যারান্টি আছে?",
+        reply: "জি না আপু, এটি হাই-কোয়ালিটি প্রিমিয়াম বডি প্লাস্টিক এবং কালার প্রলেপে তৈরি। কালার ফেড হওয়ার কোনো সুযোগ নেই।",
         date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleDateString("bn-BD")
       }
     ];
@@ -205,10 +227,11 @@ export default function ProductDetailModal({
       setAddedMessage(false);
       setActiveImage(product.image);
       setActiveThumbId("thumb-1");
+      setActiveIndex(0);
       
       // Reset scroll position of the gallery container
       setTimeout(() => {
-        const scrollContainer = document.getElementById("product-gallery-scroll-container");
+        const scrollContainer = document.getElementById("product-detail-swipe-container");
         if (scrollContainer) {
           scrollContainer.scrollLeft = 0;
         }
@@ -269,12 +292,10 @@ export default function ProductDetailModal({
     };
     if (isOpen) {
       window.addEventListener("keydown", handleKeyDown);
-      
-      // Reset scroll of the page viewport instantly so the modal does not align offset due to #root transform boundaries on mobile screens
       window.scrollTo({ top: 0, behavior: "instant" });
       
       // Also reset modal container inside
-      const modalElement = document.getElementById("upscaled-product-portal-dialog");
+      const modalElement = document.getElementById("product-detail-mobile-page");
       if (modalElement) {
         modalElement.scrollTop = 0;
       }
@@ -295,8 +316,7 @@ export default function ProductDetailModal({
         } else if (prev.hrs > 0) {
           return { hrs: prev.hrs - 1, mins: 59, secs: 59 };
         } else {
-          // Restart loop
-          return { hrs: 3, mins: 44, secs: 59 };
+          return { hrs: 2, mins: 44, secs: 59 };
         }
       });
     }, 1000);
@@ -309,14 +329,23 @@ export default function ProductDetailModal({
     return [
       { id: "thumb-1", label: "মূল ভিউ", image: product.image, styleClass: "object-cover" },
       { id: "thumb-2", label: "ডিটেইল ভিউ", image: product.image, styleClass: "object-cover scale-150 origin-center" },
-      { id: "thumb-3", label: "স্টাইলিশ কোণ", image: product.image, styleClass: "object-cover brightness-[1.04] contrast-105" },
+      { id: "thumb-3", label: "স্টাইলিশ ফ্রন্ট", image: product.image, styleClass: "object-cover brightness-[1.04] contrast-105" },
       { id: "thumb-4", label: "প্যাকিং সিল", image: product.image, styleClass: "object-cover brightness-95 sepia-[0.1]" }
     ];
   }, [product]);
 
+  // Helper to get deterministic sold count matches style
+  const getProductSoldCount = (productId: string) => {
+    let hash = 0;
+    for (let i = 0; i < productId.length; i++) {
+        hash += productId.charCodeAt(i);
+    }
+    return (hash % 180) + 320; // Stable, realistic sales numbers matching standard screenshots
+  };
+
   if (!isOpen || !product) return null;
 
-  // Format currency with standard Bangladeshi styling comma-separated BDT
+  // Format currency
   const formatBDT = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
@@ -333,27 +362,24 @@ export default function ProductDetailModal({
     : product.reviewsCount;
 
   // Delivery configuration reactive values
-  const deliveryCost = selectedDistrict === "dhaka" ? 60 : 120;
-  const deliveryDays = selectedDistrict === "dhaka" ? "১-২ দিন (ফাস্ট ডেলিভারি)" : "৩-৫ দিন (নিরাপদ কুরিয়ার)";
-
-  // Compute estimated delivery date strings dynamically
+  const deliveryCostForDistrict = selectedDistrict === "chittagong" ? 60 : 120;
+  
+  // Custom delivery date estimates (e.g. June 17-19)
   const getDeliveryDateEstimate = () => {
-    const current = new Date();
-    const daysToAdd = selectedDistrict === "dhaka" ? 2 : 4;
-    current.setDate(current.getDate() + daysToAdd);
-    
-    // Bangla Days Translate
-    const banglaDays = ["রোববার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
-    const banglaMonths = ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"];
-    
-    const dayName = banglaDays[current.getDay()];
-    const dateNum = current.getDate();
-    const monthName = banglaMonths[current.getMonth()];
-    
-    return `${dayName}, ${dateNum} ${monthName}`;
+    const start = new Date();
+    start.setDate(start.getDate() + 2);
+    const end = new Date();
+    end.setDate(end.getDate() + 4);
+
+    const formatShortMonthAndDate = (d: Date) => {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${d.getDate()} ${months[d.getMonth()]}`;
+    };
+
+    return `${formatShortMonthAndDate(start)}-${formatShortMonthAndDate(end)}`;
   };
 
-  // Add specs to cart Trigger
+  // Add to cart callback
   const handleAddToCart = () => {
     onAddToCartWithSpecs(product, quantity, selectedColor || undefined, selectedSize || undefined);
     setAddedMessage(true);
@@ -362,24 +388,30 @@ export default function ProductDetailModal({
     }, 2000);
   };
 
-  // Copy shared link
+  // Direct checkout Buy Now callback
+  const handleBuyNowTrigger = () => {
+    if (onBuyNowWithSpecs) {
+      onBuyNowWithSpecs(product, quantity, selectedColor || undefined, selectedSize || undefined);
+    } else {
+      // Fallback
+      onAddToCartWithSpecs(product, quantity, selectedColor || undefined, selectedSize || undefined);
+    }
+  };
+
   const handleCopyLink = () => {
     const text = `${window.location.origin}/product/${product.id} - ${product.title}`;
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  // Add/Remove wishlist
   const toggleWishlist = () => {
     const next = !isWishlisted;
     setIsWishlisted(next);
     localStorage.setItem(`zshop_bd_wishlist_${product.id}`, String(next));
-    // dispatch event
     window.dispatchEvent(new Event("zshop_bd_wishlist_update"));
   };
 
-  // File Review attachment reader
   const handleReviewPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -390,7 +422,6 @@ export default function ProductDetailModal({
     reader.readAsDataURL(file);
   };
 
-  // Submit Review Form
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReviewName.trim() || !newReviewComment.trim()) {
@@ -399,7 +430,7 @@ export default function ProductDetailModal({
     }
 
     const reviewItem: Review = {
-      id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `rev-${Date.now()}`,
       name: newReviewName.trim(),
       rating: newReviewRating,
       comment: newReviewComment.trim(),
@@ -410,8 +441,6 @@ export default function ProductDetailModal({
     const nextReviews = [reviewItem, ...reviews];
     localStorage.setItem(`zshop_bd_reviews_${product.id}`, JSON.stringify(nextReviews));
     setReviews(nextReviews);
-    
-    // Dispatch global ratings counter
     window.dispatchEvent(new Event("zshop_bd_reviews_update"));
 
     setNewReviewComment("");
@@ -421,7 +450,6 @@ export default function ProductDetailModal({
     setTimeout(() => setReviewMessage(""), 4000);
   };
 
-  // Submit Q&A
   const handleAskQuestion = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuestionText.trim()) return;
@@ -448,14 +476,14 @@ export default function ProductDetailModal({
     setNewQuestionText("");
     setQaSuccessMessage("আপনার প্রশ্নটি জমা হয়েছে। ZSHOP-এর সাপোর্ট টিম শীঘ্রই উত্তর দিবে!");
     
-    // Auto simulate support answers after 3 seconds for active e-commerce experience!
+    // Auto simulate replies
     setTimeout(() => {
       setQuestions((prev) => {
         const updated = prev.map((q) => {
           if (q.id === newQA.id) {
             return {
               ...q,
-              reply: "ধন্যবাদ আপনার ইনকুয়ারির জন্য। আপনার জিজ্ঞাসিত প্রোডাক্টটি আমাদের রেডি ইন-স্টক প্রোডাক্ট। আপনি এখনই অর্ডার প্লেস করতে পারেন, আমাদের কাস্টমার রিলেশন হাব থেকে দ্রুত কনফার্মেশন কল দেওয়া হবে।"
+              reply: "ধন্যবাদ আপনার ইনকুয়ারির জন্য। এটি আমাদের রেডি ইন-স্টক প্রোডাক্ট। আপনি এখনই অর্ডার প্লেস করতে পারেন, আমাদের কাস্টমার রিলেশন হাব থেকে দ্রুত কনফার্মেশন কল দেওয়া হবে।"
             };
           }
           return q;
@@ -463,871 +491,596 @@ export default function ProductDetailModal({
         localStorage.setItem(`zshop_bd_qa_${product.id}`, JSON.stringify(updated));
         return updated;
       });
-      // Sound alert / update notification
-    }, 4500);
+    }, 4000);
 
     setTimeout(() => setQaSuccessMessage(""), 5000);
   };
 
-  // Filter products by same category for related carousel
   const relatedProducts = products
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs overflow-y-auto cursor-pointer"
-      id="upscaled-product-portal-dialog"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
+      className="absolute inset-0 z-50 bg-[#f1f5f9] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-24"
+      id="product-detail-mobile-page"
     >
-      {/* Absolute background drop */}
-      <div className="absolute inset-0 cursor-default" onClick={onClose} />
+      {/* 1. Header Navigation Bar (Daraz Style) */}
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-150 px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs">
+        {/* Back Button */}
+        <button
+          onClick={onClose}
+          className="p-1 px-1.5 focus:outline-none hover:bg-slate-100 rounded-full transition-colors shrink-0"
+          title="সার্চ থেকে ফিরে যান"
+        >
+          <ChevronLeft className="w-6 h-6 text-slate-800 stroke-[2.5]" />
+        </button>
 
-      {/* Main Container */}
-      <div 
-        className="relative bg-white w-full max-w-5xl rounded-2xl md:rounded-3xl shadow-2xl z-10 flex flex-col md:max-h-[92vh] overflow-y-auto animate-fadeIn border border-slate-350 cursor-default"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header navigation bar inside Modal */}
-        <div className="sticky top-0 bg-white border-b border-gray-150 p-4 flex items-center justify-between z-30 shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 bg-[#f85606] rounded-full animate-ping" />
-            <span className="text-[10px] md:text-xs font-mono font-black uppercase text-[#f85606] tracking-wider">
-              ZSHOP Live Product View
-            </span>
+        {/* Center Search Input Box */}
+        <div className="flex-1 flex items-center border-[1.8px] border-[#f85606] bg-[#f9f9f9] rounded-xl px-2.5 py-1.5 shadow-xs">
+          <input
+            type="text"
+            readOnly
+            value="Search in Daraz"
+            className="w-full text-xs font-semibold text-slate-450 bg-transparent focus:outline-none pr-1 select-none pointer-events-none"
+          />
+          <Camera className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" />
+        </div>
+
+        {/* Right Icons: Share, Cart with red badging, Menu Dots with badging */}
+        <div className="flex items-center gap-2 text-slate-700 shrink-0">
+          <button onClick={handleCopyLink} className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full relative" title="লিংক কপি করুন">
+            <Share2 className="w-5 h-5 stroke-[2.2]" />
+            {copiedLink && (
+              <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap">
+                Copied!
+              </span>
+            )}
+          </button>
+
+          {/* Cart Icon */}
+          <div className="relative">
+            <button 
+              onClick={() => {
+                onClose();
+                // trigger open cart on home viewport
+                document.getElementById("navbar-floating-cart-anchor")?.click();
+              }} 
+              className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full"
+            >
+              <ShoppingCart className="w-5 h-5 stroke-[2.2]" />
+            </button>
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
+                {cartCount}
+              </span>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5">
-            {/* Wishlist triggers */}
-            <button
-              onClick={toggleWishlist}
-              className={`p-2 rounded-full border border-gray-150 transition-all cursor-pointer ${isWishlisted ? "bg-rose-50 text-rose-650 border-rose-150" : "bg-white text-gray-400 hover:text-rose-600"}`}
-              title="পছন্দের তালিকায় যুক্ত করুন"
-            >
-              <Heart className={`w-4 h-4 ${isWishlisted ? "fill-current" : ""}`} />
+          <div className="relative">
+            <button className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full">
+              <MoreHorizontal className="w-5 h-5 stroke-[2.2]" />
             </button>
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
+              16
+            </span>
+          </div>
+        </div>
+      </div>
 
-            {/* Close trigger */}
+      {/* 2. Photo Gallery Cover */}
+      <div className="relative aspect-square w-full bg-white overflow-hidden select-none">
+        <div 
+          id="product-detail-swipe-container"
+          className="w-full h-full overflow-x-auto flex snap-x snap-mandatory scroll-smooth scrollbar-none"
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            if (el.clientWidth > 0) {
+              const scrollPos = el.scrollLeft;
+              const idx = Math.round(scrollPos / el.clientWidth);
+              setActiveIndex(idx);
+              const targetThumb = alternativeThumbnails[idx];
+              if (targetThumb && targetThumb.id !== activeThumbId) {
+                setActiveThumbId(targetThumb.id);
+              }
+            }
+          }}
+        >
+          {alternativeThumbnails.map((thumb) => (
+            <div key={thumb.id} className="w-full h-full shrink-0 snap-center snap-always relative">
+              <img
+                src={thumb.image}
+                alt={`${product.title} - ${thumb.label}`}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover object-center"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Video / Photos Selector Badge */}
+        <div className="absolute top-3.5 right-3.5 flex items-center bg-slate-900/40 backdrop-blur-md rounded-full overflow-hidden p-[2px] border border-white/10 text-[10px] font-extrabold shadow-sm">
+          <span className="px-2.5 py-1 text-white/70 hover:text-white flex items-center gap-0.5 cursor-pointer">
+            <Play className="w-2.5 h-2.5 fill-current" /> Video
+          </span>
+          <span className="px-3.5 py-1 bg-white text-[#212121] rounded-full shadow-xs">
+            Photos
+          </span>
+        </div>
+
+        {/* Count Indicator */}
+        <div className="absolute bottom-3.5 right-3.5 bg-black/40 text-white text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1">
+          <span>📹</span> {activeIndex + 1}/{alternativeThumbnails.length}
+        </div>
+
+        {/* Campaign Left Voucher Stamp */}
+        {product.discountTag && (
+          <span className="absolute top-3.5 left-3.5 bg-[#f85606] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded-xs shadow-xs uppercase tracking-wider">
+            {product.discountTag}
+          </span>
+        )}
+      </div>
+
+      {/* 3. Small thumbnails rows indicator */}
+      <div className="bg-white px-3 py-2 flex gap-1.5 overflow-x-auto border-b border-gray-100 scrollbar-none">
+        {alternativeThumbnails.map((thumb, idx) => (
+          <button
+            key={thumb.id}
+            onClick={() => {
+              setActiveThumbId(thumb.id);
+              const container = document.getElementById("product-detail-swipe-container");
+              if (container) {
+                container.scrollTo({
+                  left: idx * container.clientWidth,
+                  behavior: "smooth"
+                });
+              }
+            }}
+            className={`w-11 h-11 shrink-0 rounded-lg overflow-hidden border transition-all ${activeThumbId === thumb.id ? "border-[#f85606]" : "border-gray-200"}`}
+          >
+            <img src={thumb.image} alt={thumb.label} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${thumb.styleClass}`} />
+          </button>
+        ))}
+      </div>
+
+      {/* 4. Pricing, Campaign Label and Voucher Saves Bar */}
+      <div className="bg-white px-3.5 py-3 border-b border-gray-100 space-y-1.5 text-left">
+        {/* Campaign ticket indicator */}
+        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#f85606] leading-none">
+          <span className="bg-[#feeeeb] text-[#f85606] px-1 py-0.5 rounded-xs border border-[#ffe0d9] text-[9px] font-black uppercase tracking-wider leading-none">
+            Voucher Max
+          </span>
+          <span className="text-[12px] font-bold leading-none">Voucher Saves ৳ 26 🎫</span>
+        </div>
+
+        {/* Price output matches picture */}
+        <div className="flex items-baseline gap-2 pt-0.5 leading-none">
+          <span className="text-[26px] font-black text-[#f85606] leading-none font-display">
+            ৳{formatBDT(product.price)}
+          </span>
+          {product.originalPrice && product.originalPrice > product.price && (
+            <>
+              <span className="text-xs text-slate-400 line-through leading-none font-medium">
+                ৳{formatBDT(product.originalPrice)}
+              </span>
+              <span className="text-[10px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-1 py-0.2 rounded-xs leading-none">
+                -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 5. Product Title Head with Action Icons */}
+      <div className="bg-white px-3.5 pb-3 border-b border-gray-100 text-left relative space-y-2">
+        <h1 className="text-xs font-semibold text-slate-900 leading-relaxed pr-8 line-clamp-2 md:line-clamp-none font-sans">
+          {product.title}
+        </h1>
+
+        <button 
+          onClick={toggleWishlist}
+          className="absolute right-3 top-[-4px] p-1.5 text-gray-400 hover:text-red-500 transition-colors focus:outline-none"
+        >
+          <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
+        </button>
+
+        {/* Ratings and sold volume count */}
+        <div className="flex items-center gap-1.5 text-[11px] text-[#222] font-semibold pt-0.5">
+          <span className="text-amber-500 text-[12px]">★</span>
+          <span className="font-extrabold text-slate-800">{roundedHeadingRating.toFixed(1)}</span>
+          <span className="text-gray-400 font-medium">({totalReviewsCount})</span>
+          <span className="text-gray-300">|</span>
+          <span className="text-gray-500 font-medium">{getProductSoldCount(product.id)} sold</span>
+        </div>
+      </div>
+
+      {/* 6. High Fidelity Returns and Standard Localized Delivery blocks */}
+      <div className="bg-white mt-2 border-t border-b border-gray-150 p-3.5 space-y-4 text-left">
+        
+        {/* Row 1: Return guarantee */}
+        <div className="flex items-start justify-between cursor-pointer group">
+          <div className="flex items-start gap-2 text-xs text-slate-800">
+            <span className="text-green-600 font-bold block mt-0.5 text-xs">🛡️</span>
+            <div>
+              <p className="font-bold">14 days easy return</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">১০০% অথেন্টিসিটি এবং ৭ দিনের সহজ রিপ্লেসমেন্ট পলিসি</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 self-center" />
+        </div>
+
+        {/* Divider */}
+        <div className="border-t border-gray-100" />
+
+        {/* Row 2: Standard Delivery details */}
+        <div className="flex items-start justify-between cursor-pointer group">
+          <div className="flex items-start gap-2 text-xs text-slate-800">
+            <span className="text-indigo-600 block mt-0.5 text-xs">🚚</span>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <p className="font-bold">Guaranteed by {getDeliveryDateEstimate()}</p>
+                <span className="bg-orange-50 border border-orange-200 text-[#f85606] text-[8px] font-black px-1 rounded-sm uppercase tracking-wide">
+                  With Voucher ৳ 120
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-700">Standard Delivery</p>
+              
+              {/* Specialized localized Address selection inside Chittagong */}
+              <div className="flex items-center gap-1 text-[10px] text-[#f85606] font-bold bg-[#fffdf0] border border-[#ffebaa] rounded px-1.5 py-0.5 mt-1.5 self-start">
+                <MapPin className="w-3 h-3 text-[#f85606]" />
+                <span>To Bayezid Bostami (চট্টগ্রাম) • ৳{deliveryCostForDistrict} কুরিয়ার চার্জ</span>
+              </div>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 self-center" />
+        </div>
+      </div>
+
+      {/* 7. Vouchers Row Section */}
+      <div className="bg-white mt-1.5 border-t border-b border-gray-150 p-3 flex items-center justify-between text-left cursor-pointer">
+        <div className="flex items-center gap-3.5">
+          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest text-[9px]">Vouchers</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="border border-dashed border-red-300 text-[#f85606] bg-red-50 text-[10px] font-extrabold px-1.5 py-0.5 rounded-sm">
+              ৳40 Off
+            </span>
+            <span className="bg-[#e6f9f6] text-[#00b4a0] text-[9px] font-black px-1.5 py-0.5 rounded-xs border border-[#bcefed] uppercase">
+              Free Shipping T&C
+            </span>
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400" />
+      </div>
+
+      {/* 8. Specifications Selectors (Colors & Sizes) */}
+      <div className="bg-white mt-1.5 border-t border-b border-gray-150 p-3.5 space-y-4 text-left">
+        <h3 className="text-xs font-bold text-slate-900 border-l-[3px] border-[#f85606] pl-2 uppercase tracking-wide">
+          বাছাই করুন (Specifications)
+        </h3>
+
+        {/* Color specification rows */}
+        {product.colors && product.colors.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">কালার/ভ্যারিয়েন্ট:</span>
+            <div className="flex flex-wrap gap-2">
+              {product.colors.map((col) => (
+                <button
+                  key={col}
+                  onClick={() => setSelectedColor(col)}
+                  className={`px-3 py-1 bg-slate-50 border rounded-lg text-xs font-semibold cursor-pointer transition-all ${selectedColor === col ? "border-[#f85606] text-[#f85606] bg-[#feeeeb] font-extrabold" : "border-gray-200 text-slate-700 hover:border-gray-450"}`}
+                >
+                  {col}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Sizes specification rows */}
+        {product.sizes && product.sizes.length > 0 && (
+          <div className="space-y-1.5">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">সাইজ কোড:</span>
+            <div className="flex flex-wrap gap-2">
+              {product.sizes.map((sz) => (
+                <button
+                  key={sz}
+                  onClick={() => setSelectedSize(sz)}
+                  className={`min-w-8 h-8 px-2 flex items-center justify-center border rounded-lg text-xs font-mono font-bold cursor-pointer transition-all ${selectedSize === sz ? "border-[#f85606] text-[#f85606] bg-[#feeeeb]" : "border-gray-200 text-slate-700 hover:border-gray-450"}`}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quantity selector row */}
+        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+          <span className="text-[11px] font-bold text-slate-650">অর্ডারের পরিমাণ (Quantity):</span>
+          <div className="flex items-center border border-gray-250 rounded-xl bg-slate-50 overflow-hidden h-9">
             <button
-              onClick={onClose}
-              className="p-2 bg-slate-50 border border-gray-200 text-gray-550 hover:text-slate-900 rounded-full cursor-pointer hover:bg-slate-100 transition-colors"
-              title="বন্ধ করুন"
+              onClick={() => { if (quantity > 1) setQuantity(quantity - 1); }}
+              className="px-3.5 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none"
             >
-              <X className="w-4 h-4" />
+              -
+            </button>
+            <span className="w-7 text-center text-xs font-bold text-slate-900">{quantity}</span>
+            <button
+              onClick={() => setQuantity(quantity + 1)}
+              className="px-3.5 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none"
+            >
+              +
             </button>
           </div>
         </div>
+      </div>
 
-        {/* Content Body Layout */}
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-          
-          {/* Main Showcase block: Image + Pricing Specs Details */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-            
-            {/* Left side: Premium Image Gallery Hub (5 cols) */}
-            <div className="lg:col-span-5 space-y-4">
-              {/* Primary Image Viewport - NOW HORIZONTALLY SCROLLABLE/SWIPEABLE */}
-              <div className="relative aspect-square rounded-2xl bg-slate-50 border border-gray-200 overflow-hidden shadow-sm group">
-                <div 
-                  id="product-gallery-scroll-container"
-                  className="w-full h-full overflow-x-auto flex snap-x snap-mandatory scroll-smooth scrollbar-none select-none"
-                  onScroll={(e) => {
-                    const el = e.currentTarget;
-                    if (el.clientWidth > 0) {
-                      const scrollPos = el.scrollLeft;
-                      const idx = Math.round(scrollPos / el.clientWidth);
-                      const targetThumb = alternativeThumbnails[idx];
-                      if (targetThumb && targetThumb.id !== activeThumbId) {
-                        setActiveThumbId(targetThumb.id);
-                      }
-                    }
-                  }}
-                >
-                  {alternativeThumbnails.map((thumb) => (
-                    <div 
-                      key={thumb.id}
-                      className="w-full h-full shrink-0 snap-center snap-always relative aspect-square overflow-hidden"
-                    >
-                      <img
-                        src={thumb.image}
-                        alt={`${product.title} - ${thumb.label}`}
-                        referrerPolicy="no-referrer"
-                        className={`w-full h-full object-cover object-center transition-transform duration-300 hover:scale-135 cursor-zoom-in ${thumb.styleClass}`}
-                      />
-                    </div>
-                  ))}
-                </div>
+      {/* 9. Collapsible Switch Tabs: Description, Specs, Q&A and Reviews */}
+      <div className="bg-white mt-1.5 border-t border-b border-gray-150 text-left">
+        <div className="flex border-b border-gray-150 bg-slate-50 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setActiveTab("detail")}
+            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "detail" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
+          >
+            📊 Description
+          </button>
+          <button
+            onClick={() => setActiveTab("specs")}
+            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "specs" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
+          >
+            ⚙️ Specifications
+          </button>
+          <button
+            onClick={() => setActiveTab("qa")}
+            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "qa" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
+          >
+            💬 Q&A ({questions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("reviews")}
+            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "reviews" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
+          >
+            ⭐ Reviews ({reviews.length})
+          </button>
+        </div>
 
-                {/* Left/Right Navigation Slide Arrows */}
-                <button
-                  onClick={() => {
-                    const container = document.getElementById("product-gallery-scroll-container");
-                    if (container) {
-                      container.scrollBy({ left: -container.clientWidth, behavior: "smooth" });
-                    }
-                  }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-slate-800 p-1.5 rounded-full shadow-md z-10 cursor-pointer border border-gray-150 hover:scale-105 transition-all select-none focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-100 duration-200"
-                  title="পূর্ববর্তী ছবি"
-                >
-                  <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
-                </button>
-                <button
-                  onClick={() => {
-                    const container = document.getElementById("product-gallery-scroll-container");
-                    if (container) {
-                      container.scrollBy({ left: container.clientWidth, behavior: "smooth" });
-                    }
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/85 hover:bg-white text-slate-800 p-1.5 rounded-full shadow-md z-10 cursor-pointer border border-gray-150 hover:scale-105 transition-all select-none focus:outline-none flex items-center justify-center opacity-0 group-hover:opacity-100 duration-200"
-                  title="পরবর্তী ছবি"
-                >
-                  <ChevronRight className="w-4 h-4 stroke-[2.5]" />
-                </button>
-
-                {/* Micro campaign tag inside image */}
-                {product.discountTag && (
-                  <span className="absolute top-4 left-4 bg-gradient-to-r from-rose-600 to-amber-500 text-white font-extrabold text-[10px] px-3 py-1 rounded-lg uppercase tracking-wider shadow-md z-10">
-                    {product.discountTag}
-                  </span>
-                )}
-
-                {/* Trending Ribbon */}
-                {product.isTrending && (
-                  <div className="absolute top-4 right-4 bg-slate-950/85 text-amber-400 font-extrabold text-[9px] px-2 py-1 rounded-md border border-amber-400/20 flex items-center gap-1 uppercase tracking-wide z-10">
-                    <Award className="w-3.5 h-3.5 text-amber-400 fill-current" />
-                    <span>ZSHOP BD MALL SELLER</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Thumbnail snapshots block */}
-              <div className="grid grid-cols-4 gap-2">
-                {alternativeThumbnails.map((thumb, index) => (
-                  <button
-                    key={thumb.id}
-                    onClick={() => {
-                      setActiveThumbId(thumb.id);
-                      const container = document.getElementById("product-gallery-scroll-container");
-                      if (container) {
-                        container.scrollTo({
-                          left: index * container.clientWidth,
-                          behavior: "smooth"
-                        });
-                      }
-                    }}
-                    onMouseEnter={() => {
-                      setActiveThumbId(thumb.id);
-                      const container = document.getElementById("product-gallery-scroll-container");
-                      if (container) {
-                        container.scrollTo({
-                          left: index * container.clientWidth,
-                          behavior: "smooth"
-                        });
-                      }
-                    }}
-                    className={`relative aspect-square rounded-xl bg-slate-50 border overflow-hidden transition-all duration-200 cursor-pointer ${activeThumbId === thumb.id ? "border-[#f85606] shadow-xs scale-[1.02] ring-1 ring-[#f85606]/30" : "border-gray-200 hover:border-gray-400"}`}
-                  >
-                    <img
-                      src={thumb.image}
-                      alt={thumb.label}
-                      referrerPolicy="no-referrer"
-                      className={`w-full h-full object-cover ${thumb.styleClass}`}
-                    />
-                    
-                    {/* Shadow active label */}
-                    <div className="absolute bottom-0 inset-x-0 bg-black/40 text-white text-[8px] font-bold text-center py-0.5 pointer-events-none uppercase">
-                      {thumb.id === "thumb-1" ? "১০০% সত্য" : thumb.label}
-                    </div>
-                  </button>
-                ))}
-              </div>
-
-              {/* Social sharing widget */}
-              <div className="bg-slate-50/75 border border-gray-150 p-3 rounded-2xl flex items-center justify-between gap-3 text-xs">
-                <span className="font-bold text-slate-500 font-sans tracking-wide">Share:</span>
-                
-                <div className="flex items-center gap-2">
-                  {/* Copy Link Button */}
-                  <button
-                    onClick={handleCopyLink}
-                    className="py-1 px-2.5 bg-white border border-gray-200 rounded-lg hover:border-gray-300 text-slate-700 font-bold text-[10px] flex items-center gap-1 cursor-pointer select-none active:bg-slate-50"
-                  >
-                    <Copy className="w-3 h-3 text-gray-500" />
-                    <span>{copiedLink ? "কপি হয়েছে!" : "লিংক কপি করুন"}</span>
-                  </button>
-
-                  {/* Share on WhatsApp */}
-                  <a
-                    href={`https://api.whatsapp.com/send?text=Check out this awesome product: ${product.title} at ${window.location.host}/product/${product.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="p-1 px-2 bg-[#25d366]/10 text-[#128c7e] rounded-lg font-bold text-[10px] flex items-center gap-1 border border-[#25d366]/20"
-                  >
-                    <span>WhatsApp</span>
-                  </a>
-                </div>
-              </div>
-
-            </div>
-
-            {/* Right side: Specifications Form & Delivery Controls (7 cols) */}
-            <div className="lg:col-span-7 space-y-5 text-left flex flex-col justify-between">
-              
-              <div className="space-y-4">
-                {/* Category & Verified Seller Hub Info */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-[#f85606] font-extrabold bg-[#f85606]/10 px-2 py-0.5 rounded-md">
-                    {product.category}
-                  </span>
-                  
-                  {product.merchantShopName ? (
-                    <span className="text-[10px] font-bold text-slate-500 border-l border-gray-300 pl-2">
-                      সেলার: <span className="text-slate-900 font-black">{product.merchantShopName}</span>
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-slate-500 border-l border-gray-300 pl-2">
-                      সেলার: <span className="text-slate-900 font-black">ZSHOP BD MALL SELLER (অফিসিয়াল)</span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Product Title Banner */}
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-display font-black text-slate-950 leading-tight">
-                  {product.title}
-                </h2>
-
-                {/* Ratings & Total Orders metrics */}
-                <div className="flex flex-wrap items-center gap-3.5 pb-3 border-b border-gray-150">
-                  <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/60 px-2 py-0.5 rounded-lg text-amber-500">
-                    <div className="flex items-center gap-0.5">
-                      <Star className="w-3.5 h-3.5 fill-current text-amber-400" />
-                    </div>
-                    <span className="text-xs font-mono font-black text-slate-900">{roundedHeadingRating}</span>
-                  </div>
-
-                  <span className="text-xs text-[#f85606] font-bold cursor-pointer" onClick={() => setActiveTab("reviews")}>
-                    {totalReviewsCount} কাস্টমার রিভিউস
-                  </span>
-
-                  <span className="text-xs text-slate-400 font-medium">|</span>
-
-                  <span className="text-xs text-emerald-650 font-bold bg-emerald-50 px-2 py-0.5 rounded-lg">
-                    {Math.max(12, product.reviewsCount + 15)} টি অর্ডার সফলভাবে ডেলিভারড হয়েছে
-                  </span>
-                </div>
-
-                {/* Flash Deal Urgency Timer Widget */}
-                {product.inStock && (
-                  <div className="bg-gradient-to-r from-red-650 via-rose-600 to-amber-500 p-3 sm:p-4 rounded-2xl text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm relative overflow-hidden">
-                    <div className="space-y-0.5 z-10">
-                      <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide flex items-center gap-1.5 text-amber-200">
-                        <Zap className="w-3.5 h-3.5 fill-current animate-bounce text-amber-300" />
-                        লিমিটেড ফ্লাশ ডিল অফার!
-                      </p>
-                      <p className="text-xs text-white/90">দারুণ মূল্যছাড়ে এখনই অর্ডার সম্পন্ন করুন।</p>
-                    </div>
-
-                    {/* Timer digits */}
-                    <div className="flex items-center gap-1.5 z-10 self-start sm:self-center font-mono">
-                      <span className="text-[10px] text-rose-100 font-bold font-sans">অফার শেষ হতে বাকি:</span>
-                      <div className="bg-slate-950/40 border border-white/20 text-white font-black text-xs px-2.5 py-1.5 rounded-lg">
-                        {String(countdown.hrs).padStart(2, "0")}ঘণ্টা
-                      </div>
-                      <div className="bg-slate-950/40 border border-white/20 text-white font-black text-xs px-2.5 py-1.5 rounded-lg">
-                        {String(countdown.mins).padStart(2, "0")}মিঃ
-                      </div>
-                      <div className="bg-[#f85606] text-white font-black text-xs px-2.5 py-1.5 rounded-lg animate-pulse">
-                        {String(countdown.secs).padStart(2, "0")}সেঃ
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Pricing module */}
-                <div className="bg-slate-50/60 p-4 rounded-2xl border border-gray-200 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-slate-400 block font-mono uppercase tracking-wider leading-none">বিশেষ ক্যাম্পেইন মূল্য</span>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl sm:text-3xl font-display font-black text-[#f85606]">
-                        ৳{formatBDT(product.price)}
-                      </span>
-                      {product.originalPrice && product.originalPrice > product.price && (
-                        <span className="text-xs sm:text-sm text-gray-400 line-through font-semibold">
-                          ৳{formatBDT(product.originalPrice)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {product.originalPrice && product.originalPrice > product.price && (
-                    <div className="text-right">
-                      <span className="bg-emerald-500 text-white font-black text-[9px] px-2 py-1 rounded-lg uppercase tracking-wider block shadow-sm">
-                        সঞ্চয় ৳{formatBDT(product.originalPrice - product.price)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Selectors for specifications */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Colors */}
-                  {product.colors && product.colors.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-slate-650 uppercase tracking-wide">পণ্যর কালার/ভ্যারিয়েন্ট *</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {product.colors.map((col) => (
-                          <button
-                            key={col}
-                            onClick={() => setSelectedColor(col)}
-                            className={`px-3 py-1.5 border rounded-xl text-xs font-semibold cursor-pointer transition-all ${selectedColor === col ? "border-[#f85606] bg-[#f85656]/5 text-[#f85606] font-black" : "border-gray-200 text-slate-700 bg-white hover:border-gray-350"}`}
-                          >
-                            {col}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Sizes */}
-                  {product.sizes && product.sizes.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="block text-[11px] font-bold text-slate-650 uppercase tracking-wide">সাইজ সিলেক্ট করুন *</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {product.sizes.map((sz) => (
-                          <button
-                            key={sz}
-                            onClick={() => setSelectedSize(sz)}
-                            className={`min-w-8 h-8 flex items-center justify-center border rounded-xl text-xs font-mono font-bold cursor-pointer transition-all ${selectedSize === sz ? "border-[#f85606] bg-[#f85656]/5 text-[#f85606]" : "border-gray-200 text-slate-705 bg-white hover:border-gray-350"}`}
-                          >
-                            {sz}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Shipping Estimator widget */}
-                <div className="p-3 bg-slate-50 border border-gray-200 rounded-2xl space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
-                      <MapPin className="w-4 h-4 text-[#f85606]" />
-                      ডেলিভারি ডিস্ট্রিক্ট নির্বাচন করুনঃ
-                    </span>
-                    <select
-                      value={selectedDistrict}
-                      onChange={(e) => setSelectedDistrict(e.target.value)}
-                      className="bg-white border border-gray-200 text-xs font-bold rounded-lg px-2 py-1 outline-none cursor-pointer focus:border-[#f85606]"
-                    >
-                      <option value="dhaka">ঢাকা (Dhaka Division)</option>
-                      <option value="chittagong">চট্টগ্রাম (Chittagong)</option>
-                      <option value="sylhet">সিলেট (Sylhet)</option>
-                      <option value="rajshahi">রাজশাহী (Rajshahi)</option>
-                      <option value="khulna">খুলনা (Khulna)</option>
-                      <option value="barishal">বরিশাল (Barishal)</option>
-                      <option value="rangpur">রংপুর (Rangpur)</option>
-                      <option value="mymensingh">ময়মনসিংহ (Mymensingh)</option>
-                    </select>
-                  </div>
-
-                  {/* Live Cost Output */}
-                  <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-gray-200/70 text-[11px] font-medium text-slate-650">
-                    <p className="flex items-center gap-1.5">
-                      <Truck className="w-3.5 h-3.5 text-gray-400" />
-                      কুরিয়ার চার্জ: <span className="font-bold text-slate-900">৳{deliveryCost}</span>
-                    </p>
-                    <p className="flex items-center gap-1.5 text-right justify-end">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                      ডেলিভারি সময়: <span className="font-bold text-[#f85606]">{deliveryDays}</span>
-                    </p>
-                  </div>
-
-                  <p className="text-[10px] text-gray-500 font-medium flex items-center gap-1 bg-white/50 p-1.5 rounded-lg border border-gray-150">
-                    <Info className="w-3 h-3 text-amber-500 shrink-0" />
-                    ডিপোচার অনুমান: পণ্যটি অর্ডার করার পর সম্ভবত <span className="font-bold text-[#f85606]">{getDeliveryDateEstimate()}</span> এর মধ্যে আপনার ঠিকানায় পৌঁছাবে।
-                  </p>
-                </div>
-
-              </div>
-
-              {/* Drawer actions button */}
-              <div className="pt-3 border-t border-gray-150 flex items-center gap-3">
-                {/* Quantity triggers for buying */}
-                {product.inStock && (
-                  <div className="flex items-center border border-gray-200 rounded-xl bg-white h-12">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (quantity > 1) setQuantity(quantity - 1);
-                      }}
-                      className="px-3 text-gray-500 hover:text-slate-950 h-full flex items-center justify-center hover:bg-slate-50 rounded-l-xl focus:outline-none cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <span className="w-8 text-center text-xs font-mono font-extrabold text-slate-900">
-                      {quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="px-3 text-gray-500 hover:text-slate-950 h-full flex items-center justify-center hover:bg-slate-50 rounded-r-xl focus:outline-none cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-
-                {/* Main Action buttons */}
-                <div className="flex-1">
-                  {product.inStock ? (
-                    <button
-                      onClick={handleAddToCart}
-                      className={`w-full h-12 bg-slate-950 hover:bg-[#d64a05] text-white rounded-xl text-xs font-display font-bold hover:bg-[#f85606] hover:border-[#f85606] transition-all flex items-center justify-center gap-2 group cursor-pointer focus:outline-none border border-slate-950 ${addedMessage ? "bg-emerald-600 border-emerald-600 hover:bg-emerald-600" : ""}`}
-                    >
-                      {addedMessage ? (
-                        <>
-                          <CheckCircle2 className="w-4 h-4 animate-bounce shrink-0" />
-                          <span>সফলভাবে যুক্ত হয়েছে!</span>
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="w-4 h-4 group-hover:scale-110 transition-transform text-white" />
-                          <span>কার্টে যুক্ত করুন (Add to Cart) • ৳{formatBDT(product.price * quantity)}</span>
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      className="w-full h-12 bg-gray-100 border border-gray-200 text-gray-400 rounded-xl text-xs font-display font-semibold flex items-center justify-center"
-                    >
-                      সাময়িকভাবে স্টকে নেই
-                    </button>
-                  )}
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          {/* Large tabswitcher layout: Description / specifications / Reviews */}
-          <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white">
-            {/* Tabs head */}
-            <div className="flex border-b border-gray-150 bg-slate-50 p-2 overflow-x-auto gap-1">
-              <button
-                onClick={() => setActiveTab("detail")}
-                className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${activeTab === "detail" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
-              >
-                📊 বর্ণনা (Description)
-              </button>
-              <button
-                onClick={() => setActiveTab("specs")}
-                className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${activeTab === "specs" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
-              >
-                ⚙️ টেকনিক্যাল স্পেসিফিকেশন
-              </button>
-              <button
-                onClick={() => setActiveTab("qa")}
-                className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${activeTab === "qa" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
-              >
-                💬 কাস্টমার প্রশ্নোত্তর ({questions.length})
-              </button>
-              <button
-                onClick={() => setActiveTab("reviews")}
-                className={`py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${activeTab === "reviews" ? "bg-white text-[#f85606] shadow-xs" : "text-gray-550 hover:text-slate-800"}`}
-              >
-                ⭐ রিভিউ ও রেটিং ({reviews.length})
-              </button>
-            </div>
-
-            {/* TAB CONTENTS */}
-            <div className="p-4 sm:p-6 text-left">
-              
-              {/* DESCRIPTION */}
-              {activeTab === "detail" && (
-                <div className="space-y-4 font-sans text-xs sm:text-sm leading-relaxed text-slate-700">
-                  <div className="p-3 bg-rose-50/40 border border-rose-100 rounded-xl text-[12px] text-slate-800 flex items-start gap-2 max-w-2xl">
-                    <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold text-rose-950">ZSHOP BD MALL SELLER গ্যারান্টিঃ</p>
-                      <p className="mt-0.5 text-slate-600">আমরা সরাসরি ব্র্যান্ড অথেন্টিসিটির গ্যারান্টি দিয়ে পণ্য সরবরাহ করে থাকি। ছবিতে প্রদর্শিত মূল্যের বাইরে কোনো অতিরিক্ত চার্জ নেই।</p>
-                    </div>
-                  </div>
-
-                  <p className="whitespace-pre-line text-slate-650 leading-relaxed font-sans">{product.description}</p>
-                </div>
-              )}
-
-              {/* SPECIFICATIONS TAB */}
-              {activeTab === "specs" && (
-                <div className="max-w-2xl">
-                  <table className="w-full text-xs font-medium border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-205 text-slate-400 font-mono tracking-wider text-[10px] uppercase">
-                        <th className="py-2.5 text-left font-bold block">স্পেকস টাইটেল</th>
-                        <th className="py-2.5 text-left font-bold">বিস্তারিত মানসমূহ</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {specifications.map((spec, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 font-sans">
-                          <td className="py-3 pr-4 font-bold text-slate-500 w-1/3 leading-snug">{spec.label}</td>
-                          <td className="py-3 text-slate-900 font-semibold leading-relaxed">{spec.value}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Q&A BOARD TAB */}
-              {activeTab === "qa" && (
-                <div className="space-y-6 max-w-3xl">
-                  {/* ask question input box */}
-                  <form onSubmit={handleAskQuestion} className="bg-slate-50 p-4 border border-gray-200 rounded-2xl space-y-3">
-                    <h5 className="text-xs font-bold text-slate-800">পণ্যটি সম্পর্কে কোনো প্রশ্ন আছে? এখানে জিজ্ঞেস করুনঃ</h5>
-                    
-                    {qaSuccessMessage && (
-                      <div className="p-2 bg-emerald-50 text-emerald-800 border border-emerald-150 text-[11px] rounded-lg font-semibold flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5 text-emerald-500" />
-                        <span>{qaSuccessMessage}</span>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        required
-                        value={newQuestionText}
-                        onChange={(e) => setNewQuestionText(e.target.value)}
-                        placeholder="যেমনঃ পণ্যটির কালার কি ফেড হয়ে যাবে? বা ঢাকার বাইরে কি হোম ডেলিভারি পাওয়া যাবে?"
-                        className="flex-1 bg-white border border-gray-200 hover:border-gray-350 focus:border-[#f85606] rounded-xl px-3.5 py-2.5 outline-none text-xs font-medium"
-                      />
-                      <button
-                        type="submit"
-                        className="p-3 bg-[#f85606] hover:bg-[#d64a05] text-white rounded-xl cursor-pointer transition-colors flex items-center justify-center shrink-0 shadow-xs"
-                        title="প্রশ্ন সেন্ড করুন"
-                      >
-                        <Send className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </form>
-
-                  {/* list of questions */}
-                  <div className="space-y-4">
-                    {questions.length === 0 ? (
-                      <p className="text-xs text-slate-400 py-6 text-center">ইনকুয়ারির জন্য এখনও কোনো প্রশ্ন নেই। প্রথম আপনার প্রশ্নটি করুন!</p>
-                    ) : (
-                      questions.map((q) => (
-                        <div key={q.id} className="p-4 bg-white border border-gray-150 rounded-2xl text-xs space-y-3">
-                          
-                          {/* Query line */}
-                          <div className="flex items-start gap-2.5">
-                            <span className="bg-amber-100 text-amber-700 font-extrabold w-5 h-5 flex items-center justify-center rounded-lg text-[9px] uppercase shrink-0 font-mono mt-0.5">Q</span>
-                            <div className="space-y-0.5">
-                              <p className="font-bold text-slate-850 leading-relaxed font-sans">{q.query}</p>
-                              <p className="text-[10px] text-gray-400">প্রশ্নকারী: <span className="font-semibold text-slate-600">{q.senderName}</span> ({q.date})</p>
-                            </div>
-                          </div>
-
-                          {/* support Reply block */}
-                          {q.reply ? (
-                            <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-1 ml-6.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className="bg-slate-900 text-white font-extrabold w-5 h-5 flex items-center justify-center rounded-lg text-[9px] uppercase shrink-0 font-mono">A</span>
-                                <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest font-mono">ZSHOP Admin Hub Support</span>
-                              </div>
-                              <p className="text-slate-650 leading-relaxed font-sans pl-1 pt-0.5">{q.reply}</p>
-                            </div>
-                          ) : (
-                            <div className="p-2 bg-slate-50 text-slate-450 rounded-xl text-[10px] font-semibold italic flex items-center gap-1 ml-6.5">
-                              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-ping" />
-                              <span>আমাদের সাপোর্ট টিম প্রশ্নটি প্রসেস করছে, ৪ মিনিটের মধ্যে রিপ্লাই দেওয়া হবে...</span>
-                            </div>
-                          )}
-
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                </div>
-              )}
-
-              {/* REVIEWS LIST & GUEST REVIEW POST */}
-              {activeTab === "reviews" && (
-                <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-200/50 pb-4">
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-bold text-slate-900">কাস্টমার মতামতসমূহ</h4>
-                      <p className="text-xs text-slate-400">প্রোডাক্ট ব্যবহারের সত্য অভিজ্ঞতা সম্পর্কে ক্রেতাদের অনুভূতি ও গ্যালারি দেখু্ন।</p>
-                    </div>
-
-                    <button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="px-4 py-2.5 bg-slate-950 hover:bg-[#f85606] hover:text-white transition-all text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer focus:outline-none"
-                    >
-                      {showReviewForm ? "রিভিউ ফর্ম বন্ধ করুন ✕" : "রিভিউ ও পণ্যর ছবি পোস্ট করুন ✍️"}
-                    </button>
-                  </div>
-
-                  {/* Alert messages */}
-                  {reviewMessage && (
-                    <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-250 text-xs rounded-xl flex items-center gap-2 animate-fade-in font-semibold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                      <span>{reviewMessage}</span>
-                    </div>
-                  )}
-
-                  {/* Submission drawers */}
-                  {showReviewForm && (
-                    <form onSubmit={handleSubmitReview} className="p-4 sm:p-5 bg-white border border-gray-200 rounded-2xl shadow-xs space-y-4 animate-fade-in text-left">
-                      <h4 className="text-xs font-display font-black text-slate-950 uppercase tracking-widest border-b border-gray-100 pb-2">
-                        নতুন কাস্টমার রিভিউ যোগ করুন
-                      </h4>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">আপনার নাম / মোবাইল নম্বর</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="যেমনঃ রাসেল আহমেদ"
-                            value={newReviewName}
-                            onChange={(e) => setNewReviewName(e.target.value)}
-                            className="w-full h-10 px-3.5 border border-gray-200 focus:border-slate-950 focus:outline-none rounded-xl text-xs font-medium"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-0.5">রেটিং প্রদান করুন</label>
-                          <div className="flex items-center gap-1 h-10">
-                            {[1, 2, 3, 4, 5].map((st) => (
-                              <button
-                                key={st}
-                                type="button"
-                                onClick={() => setNewReviewRating(st)}
-                                className="p-1 focus:outline-none transition-transform hover:scale-110 cursor-pointer"
-                                title={`${st} Star`}
-                              >
-                                <Star 
-                                  className={`w-5 h-5 ${st <= newReviewRating ? "fill-amber-400 text-[#faca51] stroke-[#faca51]" : "text-gray-200"}`} 
-                                />
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-1 text-left">
-                        <label className="block text-[11px] font-bold text-slate-705 uppercase mb-0.5">মতামত ও বিস্তারিত</label>
-                        <textarea
-                          required
-                          rows={3}
-                          placeholder="পণ্যটি ডেলিভারি পাওয়ার পর কাপড়, ডিজাইন এবং ফিনিশিং নিয়ে আপনার ভালো লাগার কথাগুলো লিখুন..."
-                          value={newReviewComment}
-                          onChange={(e) => setNewReviewComment(e.target.value)}
-                          className="w-full px-3.5 py-2.5 border border-gray-200 focus:border-slate-950 focus:outline-none rounded-xl text-xs font-medium"
-                        />
-                      </div>
-
-                      <div className="space-y-2 text-left">
-                        <label className="block text-[11px] font-bold text-slate-705 uppercase mb-0.5">বাস্তব পণ্যর ছবি সংযুক্ত করুন (ঐচ্ছিক)</label>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <label className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-gray-200 hover:border-slate-400 rounded-xl cursor-pointer text-xs font-bold text-slate-700 transition-all flex items-center gap-2 select-none">
-                            <Camera className="w-4 h-4 text-slate-600" />
-                            <span>গ্যালারি থেকে ফটো বাছাই 📸</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={handleReviewPhotoUpload}
-                              className="hidden"
-                            />
-                          </label>
-
-                          {newReviewPhoto && (
-                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-150 px-3 py-2 rounded-xl">
-                              <img src={newReviewPhoto} alt="Review attachment" className="w-8 h-8 object-cover rounded-lg border" />
-                              <span className="text-[10px] text-emerald-800 font-bold">১টি ফটো সংযুক্ত হয়েছে!</span>
-                              <button
-                                type="button"
-                                onClick={() => setNewReviewPhoto(null)}
-                                className="text-gray-400 hover:text-rose-600 font-mono text-xs font-bold ml-1"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-2 pt-2.5">
-                        <button
-                          type="button"
-                          onClick={() => setShowReviewForm(false)}
-                          className="px-4 py-2 border border-gray-200 text-gray-500 hover:bg-slate-50 rounded-xl text-xs font-bold cursor-pointer"
-                        >
-                          বাতিল
-                        </button>
-                        <button
-                          type="submit"
-                          className="px-5 py-2 bg-slate-950 hover:bg-[#f85606] hover:text-white text-white rounded-xl text-xs font-bold shadow-md cursor-pointer transition-colors"
-                        >
-                          রিভিউ সাবমিট করুন
-                        </button>
-                      </div>
-                    </form>
-                  )}
-
-                  {/* Reviews looping */}
-                  <div className="space-y-4">
-                    {reviews.length === 0 ? (
-                      <p className="text-xs text-slate-450 py-8 text-center bg-slate-50 border border-gray-150 rounded-xl text-left">কোনো কাস্টমার রিভিউ পাওয়া যায়নি। আপনি প্রথম কাস্টমার রিভিউটি দিন!</p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {reviews.map((rev) => (
-                          <div key={rev.id} className="bg-white border border-gray-150 p-4 rounded-xl flex flex-col justify-between shadow-xs">
-                            <div className="space-y-2">
-                              {/* Header user */}
-                              <div className="flex items-center justify-between border-b border-gray-100 pb-1.5 text-left">
-                                <div className="flex items-center gap-2 text-left">
-                                  <div className="w-6.5 h-6.5 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-700 uppercase">
-                                    {rev.name.slice(0, 2)}
-                                  </div>
-                                  <div>
-                                    <span className="text-xs font-extrabold text-[#212121] block leading-none">{rev.name}</span>
-                                    <span className="text-[8px] text-green-600 font-bold leading-none inline-block mt-0.5">✔ ভেরিফাইড ক্রেতা (Purchase Verified)</span>
-                                  </div>
-                                </div>
-                                <span className="text-[9px] text-gray-400 font-mono">{rev.date}</span>
-                              </div>
-
-                              {/* Rating score */}
-                              <div className="flex items-center text-amber-400 gap-0.5">
-                                {[...Array(5)].map((_, i) => (
-                                  <Star
-                                    key={i}
-                                    className={`w-3.5 h-3.5 ${i < rev.rating ? "fill-amber-400 text-[#faca51]" : "text-gray-200"}`}
-                                  />
-                                ))}
-                              </div>
-
-                              {/* comment */}
-                              <p className="text-xs text-[#212121] leading-relaxed font-sans">{rev.comment}</p>
-                            </div>
-
-                            {/* Attched photo snapshot */}
-                            {rev.image && (
-                              <div className="pt-2 mt-2 border-t border-gray-50 self-start">
-                                <a href={rev.image} target="_blank" rel="noopener noreferrer" className="block text-slate-400 text-[9px] uppercase font-bold tracking-wide hover:text-slate-650 transition-colors mb-1">
-                                  📷 ক্রেতার আপলোডকৃত বাস্তব ছবিঃ
-                                </a>
-                                <div className="border border-gray-200 rounded-lg overflow-hidden w-20 h-20 bg-slate-50">
-                                  <img src={rev.image} alt="User attachment snapshot" className="w-full h-full object-cover" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                </div>
-              )}
-
-            </div>
-          </div>
-
-          {/* Interacted Related list column carousel block */}
-          {relatedProducts.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-250 pb-2 text-left">
+        <div className="p-4">
+          {/* TAB 1: DESCRIPTION */}
+          {activeTab === "detail" && (
+            <div className="space-y-4 text-xs sm:text-sm leading-relaxed text-slate-700 font-sans">
+              <div className="p-3 bg-red-50/40 border border-red-100 rounded-xl text-slate-800 flex items-start gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#f85606] shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-sm font-display font-black text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4 text-[#f85606]" />
-                    এই ক্যাটাগরির অন্যান্য জনপ্রিয় প্রোডাক্ট সমূহ (Related Products)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">ZSHOP BD কালেকশন থেকে অন্যান্য ম্যাচিং প্রোডাক্টগুলো এক ক্লিকেই রিভিউ করুন।</p>
+                  <p className="font-extrabold text-[#f85606] text-[11px] uppercase tracking-wide">ZSHOP BD MALL SELLER GUARANTEE</p>
+                  <p className="mt-0.5 text-xs text-slate-600">১০০% অথেন্টিসিটি এবং ৩ দিনে চট্টগ্রামের যেকোনো স্থানে দ্রুত হোম ডেলিভারি!</p>
                 </div>
               </div>
+              <p className="whitespace-pre-line text-[#333] font-sans leading-relaxed">{product.description}</p>
+            </div>
+          )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                {relatedProducts.map((relProduct) => {
-                  const savedRelReviews = localStorage.getItem(`zshop_bd_reviews_${relProduct.id}`);
-                  const parsedRelRev = savedRelReviews ? JSON.parse(savedRelReviews) : [];
-                  const relAggScore = parsedRelRev.length > 0 
-                    ? Number((parsedRelRev.reduce((acc: number, r: any) => acc + r.rating, 0) / parsedRelRev.length).toFixed(1))
-                    : relProduct.rating;
+          {/* TAB 2: SPECIFICATIONS */}
+          {activeTab === "specs" && (
+            <div className="space-y-1">
+              {specifications.map((spec, idx) => (
+                <div key={idx} className="flex border-b border-gray-100 py-2.5 text-xs">
+                  <span className="w-1/3 text-gray-400 font-semibold">{spec.label}</span>
+                  <span className="w-2/3 text-slate-800 font-bold">{spec.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
-                  return (
-                    <div 
-                      key={relProduct.id}
-                      onClick={() => {
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                        if (onSelectProduct) {
-                          onSelectProduct(relProduct);
-                        } else {
-                          // Force state overrides inside modal
-                          setActiveImage(relProduct.image);
-                          setSelectedColor(relProduct.colors && relProduct.colors.length > 0 ? relProduct.colors[0] : "");
-                          setSelectedSize(relProduct.sizes && relProduct.sizes.length > 0 ? relProduct.sizes[0] : "");
-                          setQuantity(1);
-                          setAddedMessage(false);
-                          setActiveTab("detail");
-                        }
-                      }}
-                      className="group bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all duration-300 p-2.5 text-left cursor-pointer flex flex-col justify-between"
-                    >
-                      <div className="space-y-2">
-                        {/* image */}
-                        <div className="aspect-square w-full rounded-lg overflow-hidden bg-slate-50 border border-gray-100 flex items-center justify-center relative">
-                          <img
-                            src={relProduct.image}
-                            alt={relProduct.title}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                          />
-                          {relProduct.discountTag && (
-                            <span className="absolute top-1.5 left-1.5 bg-[#f85606] text-white font-black text-[7px] px-1.5 py-0.2 rounded-md uppercase">
-                              {relProduct.discountTag}
-                            </span>
-                          )}
-                        </div>
+          {/* TAB 3: Q&A */}
+          {activeTab === "qa" && (
+            <div className="space-y-4">
+              <form onSubmit={handleAskQuestion} className="bg-slate-50 p-3 border border-gray-200 rounded-xl space-y-2">
+                <p className="text-[11px] font-bold text-slate-700">জিজ্ঞেস করুনঃ</p>
+                {qaSuccessMessage && (
+                  <p className="bg-green-50 text-green-800 p-2 rounded text-[11px] font-semibold">{qaSuccessMessage}</p>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={newQuestionText}
+                    onChange={(e) => setNewQuestionText(e.target.value)}
+                    placeholder="পণ্যটি সম্পর্কে আপনার যেকোনো প্রশ্ন লিখুন..."
+                    className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none text-xs"
+                  />
+                  <button type="submit" className="bg-[#f85606] text-white p-2 rounded-lg cursor-pointer">
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
 
-                        {/* Title */}
-                        <h4 className="text-xs font-semibold text-[#212121] group-hover:text-[#f85606] transition-colors leading-tight line-clamp-1">
-                          {relProduct.title}
-                        </h4>
-
-                        {/* ratings */}
-                        <div className="flex items-center gap-1 text-[10px]">
-                          <Star className="w-2.5 h-2.5 fill-amber-400 text-[#faca51] stroke-[#faca51]" />
-                          <span className="font-bold text-slate-800">{relAggScore}</span>
-                          <span className="text-gray-400">({Math.max(relProduct.reviewsCount, parsedRelRev.length)})</span>
-                        </div>
+              <div className="space-y-3 pt-2">
+                {questions.map((q) => (
+                  <div key={q.id} className="p-3 bg-white border border-gray-150 rounded-xl text-xs space-y-2">
+                    <div className="flex gap-2 items-start">
+                      <span className="bg-orange-100 text-orange-700 px-1 font-mono text-[9px] font-bold rounded">Q</span>
+                      <div>
+                        <p className="font-bold text-slate-800">{q.query}</p>
+                        <p className="text-[9px] text-[#999]">{q.senderName} ({q.date})</p>
                       </div>
-
-                      {/* Buy value */}
-                      <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
-                        <span className="text-xs font-extrabold text-[#f85606]">৳{formatBDT(relProduct.price)}</span>
-                        <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wider font-mono">
-                          রিভিউ করুন
-                        </span>
-                      </div>
-
                     </div>
-                  );
-                })}
+                    {q.reply && (
+                      <div className="p-2.5 bg-slate-50 border border-gray-100 rounded-lg ml-4 space-y-0.5">
+                        <p className="text-[9px] font-bold text-[#f85606] uppercase tracking-wide">ZShop Support Reply:</p>
+                        <p className="text-slate-600">{q.reply}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-        </div>
+          {/* TAB 4: REVIEWS */}
+          {activeTab === "reviews" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <span className="text-xs font-bold text-slate-800">ক্রেতাদের বাস্তব রিভিউসমূহ</span>
+                <button
+                  type="button"
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                  className="bg-slate-900 hover:bg-[#f85606] text-white font-bold text-[10px] px-2.5 py-1 rounded-lg"
+                >
+                  리뷰 লিখতে চান?
+                </button>
+              </div>
 
+              {reviewMessage && (
+                <p className="p-2 bg-green-50 text-green-800 rounded font-semibold text-xs">{reviewMessage}</p>
+              )}
+
+              {showReviewForm && (
+                <form onSubmit={handleSubmitReview} className="bg-slate-50 p-3 border border-gray-200 rounded-xl space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">নামঃ</label>
+                      <input
+                        type="text"
+                        required
+                        value={newReviewName}
+                        onChange={(e) => setNewReviewName(e.target.value)}
+                        className="w-full bg-white border border-gray-250 rounded px-2 py-1 text-xs"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">তারা রেটিংঃ</label>
+                      <select
+                        value={newReviewRating}
+                        onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                        className="w-full bg-white border border-gray-250 rounded px-2 py-1 text-xs outline-none"
+                      >
+                        <option value="5">★★★★★ (5 Stars)</option>
+                        <option value="4">★★★★☆ (4 Stars)</option>
+                        <option value="3">★★★☆☆ (3 Stars)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">মতামতঃ</label>
+                    <textarea
+                      required
+                      value={newReviewComment}
+                      onChange={(e) => setNewReviewComment(e.target.value)}
+                      className="w-full bg-white border border-[#ccc] rounded p-2 text-xs"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ছবি সংযুক্ত করুন (ঐচ্ছিক):</label>
+                    <input type="file" accept="image/*" onChange={handleReviewPhotoUpload} className="text-xs" />
+                  </div>
+
+                  <button type="submit" className="bg-[#f85606] block w-full text-white text-xs font-bold py-1.5 rounded-lg">
+                    সাবমিট রিভিউ (Publish)
+                  </button>
+                </form>
+              )}
+
+              <div className="space-y-3">
+                {reviews.map((rev) => (
+                  <div key={rev.id} className="p-3 bg-white border border-gray-150 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-slate-800 text-xs">{rev.name}</span>
+                      <span className="text-[9px] text-[#bbb] font-mono">{rev.date}</span>
+                    </div>
+                    <div className="flex gap-0.5 text-amber-400">
+                      {[...Array(5)].map((_, i) => (
+                        <span key={i}>{i < rev.rating ? "★" : "☆"}</span>
+                      ))}
+                    </div>
+                    <p className="text-slate-650 text-xs leading-relaxed">{rev.comment}</p>
+                    {rev.image && (
+                      <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 mt-1">
+                        <img src={rev.image} alt="User upload" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* 10. Related Carousel Block */}
+      {relatedProducts.length > 0 && (
+        <div className="p-4 space-y-3.5 text-left bg-white mt-1.5 border-t border-b border-gray-150">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
+            <span className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1">
+              <TrendingUp className="w-3.5 h-3.5 text-[#f85606]" /> Related Products
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {relatedProducts.map((relProduct) => (
+              <div
+                key={relProduct.id}
+                onClick={() => {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                  if (onSelectProduct) onSelectProduct(relProduct);
+                }}
+                className="bg-white border border-gray-200 rounded-xl p-2 cursor-pointer hover:shadow-sm"
+              >
+                <div className="aspect-square rounded-lg overflow-hidden relative bg-slate-100 mb-1.5">
+                  <img src={relProduct.image} alt={relProduct.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                </div>
+                <h4 className="text-[11px] font-bold text-slate-800 truncate leading-tight">{relProduct.title}</h4>
+                <p className="text-[#f85606] font-extrabold text-[11px] mt-0.5">৳{formatBDT(relProduct.price)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 11. Custom Bottom Action Bar Sticky to wrapper device (Daraz Orange Theme) */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white border-t border-gray-250 py-2.5 px-3 flex items-center justify-between gap-2 shadow-2xl z-40 select-none">
+        
+        {/* Store Access Button */}
+        <button 
+          onClick={onClose} 
+          className="flex flex-col items-center justify-center text-[10px] font-bold text-gray-500 w-11 focus:outline-none"
+        >
+          <Home className="w-[19px] h-[19px] text-gray-600 stroke-[2.2]" />
+          <span className="mt-0.5">Store</span>
+        </button>
+
+        {/* Chat Access Button */}
+        <button 
+          onClick={() => alert("কানেক্টিং উইথ কাস্টমার রিলেশন সাপোর্ট...")} 
+          className="flex flex-col items-center justify-center text-[10px] font-bold text-gray-500 w-11 focus:outline-none"
+        >
+          <MessageSquare className="w-[19px] h-[19px] text-gray-600 stroke-[2.2]" />
+          <span className="mt-0.5">Chat</span>
+        </button>
+
+        {/* Buy Now Yellow Button */}
+        <button
+          onClick={handleBuyNowTrigger}
+          className="flex-1 h-11 flex flex-col items-center justify-center bg-[#fdb900] hover:bg-[#e4a600] active:scale-95 text-white rounded-lg focus:outline-none transition-transform"
+        >
+          <span className="text-[11px] font-extrabold tracking-wide uppercase leading-none">Buy Now</span>
+          <span className="text-[10px] font-semibold mt-0.5 leading-none">৳{formatBDT(product.price * quantity)}</span>
+        </button>
+
+        {/* Add to Cart Orange Button */}
+        <button
+          onClick={handleAddToCart}
+          className={`flex-1 h-11 flex items-center justify-center bg-[#f85606] hover:bg-[#d64a05] active:scale-95 text-white rounded-lg font-black text-xs uppercase focus:outline-none transition-transform ${addedMessage ? "bg-green-600 hover:bg-green-600" : ""}`}
+        >
+          {addedMessage ? (
+            <span className="text-[11px]">✔ Added to Cart</span>
+          ) : (
+            <span>Add to Cart</span>
+          )}
+        </button>
+      </div>
+
     </div>
   );
 }

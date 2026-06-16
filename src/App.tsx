@@ -777,7 +777,18 @@ export default function App() {
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
         products={products}
-        onUpdateProducts={(updated) => setProducts(updated)}
+        onUpdateProducts={async (updated) => {
+          setProducts(updated);
+          try {
+            await fetch("/api/admin/products/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ products: updated })
+            });
+          } catch (err) {
+            console.error("Failed to sync products to database:", err);
+          }
+        }}
       />
 
       {/* Dynamic customer dashboard portal */}
@@ -792,6 +803,7 @@ export default function App() {
             gridTitle.scrollIntoView({ behavior: "smooth" });
           }
         }}
+        onAddToCart={handleAddToCart}
       />
 
       {/* Floating sliding Shopping Drawer */}
@@ -817,9 +829,17 @@ export default function App() {
         onSelectProduct={setSelectedProduct}
         onAddToCartWithSpecs={(prod, qty, col, sz) => {
           handleAddToCartWithSpecs(prod, qty, col, sz);
-          // Wait, after they add from modal details, we can trigger the sidebar opening!
           setIsDetailModalOpen(false);
           setTimeout(() => {
+            setCartInitialStep("cart");
+            setIsCartOpen(true);
+          }, 150);
+        }}
+        onBuyNowWithSpecs={(prod, qty, col, sz) => {
+          handleAddToCartWithSpecs(prod, qty, col, sz);
+          setIsDetailModalOpen(false);
+          setTimeout(() => {
+            setCartInitialStep("form");
             setIsCartOpen(true);
           }, 150);
         }}

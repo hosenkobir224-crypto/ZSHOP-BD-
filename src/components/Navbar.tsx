@@ -298,9 +298,13 @@ export default function Navbar({
               </div>
 
               {/* Search Submit Icon */}
-              <div className="bg-slate-950 px-5 text-white flex items-center justify-center shrink-0">
+              <button 
+                type="button"
+                id="navbar-search-submit-button"
+                className="bg-slate-950 px-5 text-white flex items-center justify-center shrink-0 cursor-pointer hover:bg-slate-850 transition-colors focus:outline-none"
+              >
                 <Search className="w-4 h-4 font-bold" />
-              </div>
+              </button>
             </div>
 
             {/* Visual Search Notifications */}
@@ -440,9 +444,13 @@ export default function Navbar({
             </label>
           </div>
 
-          <div className="bg-slate-950 text-white px-4 h-10 flex items-center justify-center shrink-0">
+          <button 
+            type="button"
+            id="mobile-search-submit-btn"
+            className="bg-slate-950 text-white px-4 h-10 flex items-center justify-center shrink-0 cursor-pointer hover:bg-slate-850 transition-colors focus:outline-none"
+          >
             <Search className="w-4 h-4" />
-          </div>
+          </button>
         </div>
 
         {/* Visual Search Mobile Notification & Badges */}

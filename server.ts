@@ -135,6 +135,23 @@ app.post("/api/products/delete", (req, res) => {
   }
 });
 
+// 4.5. Universal Product Sync (Sync products state from Admin Panel)
+app.post("/api/admin/products/sync", (req, res) => {
+  try {
+    const { products } = req.body;
+    if (!products || !Array.isArray(products)) {
+      res.status(400).json({ success: false, message: "Invalid products array." });
+      return;
+    }
+    const db = getDB();
+    db.products = products;
+    saveDB(db);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 5. Customer - Register
 app.post("/api/customers/register", (req, res) => {
   try {
@@ -357,8 +374,19 @@ app.post("/api/orders/add", (req, res) => {
         let addedEarning = 0;
         (order.cartItems || []).forEach((item: any) => {
           const prodObj = (db.products || []).find((p: any) => String(p.id) === String(item.productId));
-          const commissionRate = prodObj?.affCommission > 0 ? (prodObj.affCommission / 100) : 0.08; // 8% default
-          addedEarning += (item.price * item.quantity) * commissionRate;
+          if (prodObj) {
+            // Priority 1: Direct ৳ amount
+            if (prodObj.affiliateCommission !== undefined && prodObj.affiliateCommission >= 0) {
+              addedEarning += item.quantity * prodObj.affiliateCommission;
+            } else {
+              // Priority 2: Percentage commission
+              const commissionRate = prodObj.affCommission > 0 ? (prodObj.affCommission / 100) : 0.08;
+              addedEarning += (item.price * item.quantity) * commissionRate;
+            }
+          } else {
+            // Default 8% fallback
+            addedEarning += (item.price * item.quantity) * 0.08;
+          }
         });
         db.affiliates[affIdx].earnings = (db.affiliates[affIdx].earnings || 0) + Math.round(addedEarning);
         db.affiliates[affIdx].salesCount = (db.affiliates[affIdx].salesCount || 0) + 1;
@@ -692,6 +720,20 @@ app.get("/api/visits/stats", (req, res) => {
   try {
     const db = getDB();
     res.json({ success: true, stats: db.visits || { total: 0, daily: {} } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.get("/api/admin/accounts", (req, res) => {
+  try {
+    const db = getDB();
+    res.json({
+      success: true,
+      customers: db.customers || [],
+      merchants: db.merchants || [],
+      affiliates: db.affiliates || []
+    });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

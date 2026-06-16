@@ -68,8 +68,25 @@ export default function AdminPanel({
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // Sub-navigation state: "dashboard" | "orders" | "products" | "add-product" | "banners" | "pixel"
-  const [activeTab, setActiveTab] = useState<"dashboard" | "orders" | "products" | "add-product" | "banners" | "pixel">("dashboard");
+  // Sub-navigation state: "dashboard" | "orders" | "products" | "add-product" | "banners" | "pixel" | "accounts"
+  const [activeTab, setActiveTab] = useState<"dashboard" | "orders" | "products" | "add-product" | "banners" | "pixel" | "accounts">("dashboard");
+
+  // Accounts state
+  const [accounts, setAccounts] = useState<{
+    customers: any[];
+    merchants: any[];
+    affiliates: any[];
+  }>({
+    customers: [],
+    merchants: [],
+    affiliates: []
+  });
+  const [loadingAccounts, setLoadingAccounts] = useState<boolean>(false);
+  const [accountsError, setAccountsError] = useState<string>("");
+  const [accountFilter, setAccountFilter] = useState<"all" | "customer" | "merchant" | "affiliate">("all");
+  const [accountSearch, setAccountSearch] = useState<string>("");
+  const [copiedAccItem, setCopiedAccItem] = useState<string>("");
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   // Facebook Meta Pixel & Ads tracking states
   const [pixelIdStr, setPixelIdStr] = useState("");
@@ -261,6 +278,8 @@ export default function AdminPanel({
   const [newImage, setNewImage] = useState("");
   const [newSizes, setNewSizes] = useState("");
   const [newColors, setNewColors] = useState("");
+  const [newIsAffiliateReady, setNewIsAffiliateReady] = useState(true);
+  const [newAffiliateCommission, setNewAffiliateCommission] = useState("100");
   const [addSuccessMessage, setAddSuccessMessage] = useState("");
   const [imageSourceType, setImageSourceType] = useState<"link" | "upload">("link");
 
@@ -306,14 +325,49 @@ export default function AdminPanel({
     setPixelLogs(getPixelAuditLogs());
   };
 
+  const loadAccounts = () => {
+    setLoadingAccounts(true);
+    setAccountsError("");
+    fetch("/api/admin/accounts")
+      .then((res) => {
+        if (!res.ok) throw new Error("অ্যাকাউন্ট তালিকা লোড করতে ব্যর্থ হয়েছে।");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          setAccounts({
+            customers: data.customers || [],
+            merchants: data.merchants || [],
+            affiliates: data.affiliates || []
+          });
+        } else {
+          setAccountsError(data.message || "অ্যাকাউন্ট তালিকা লোড করতে ব্যর্থ হয়েছে।");
+        }
+      })
+      .catch((err) => {
+        console.error("Error loading accounts:", err);
+        setAccountsError(err.message || "সার্ভার এরর ঘটেছে।");
+      })
+      .finally(() => {
+        setLoadingAccounts(false);
+      });
+  };
+
   useEffect(() => {
     if (isOpen) {
       loadOrders();
       loadBanners();
       loadPixelConfigAndLogs();
       fetchVisitorStats();
+      loadAccounts();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "accounts") {
+      loadAccounts();
+    }
+  }, [activeTab, isOpen]);
 
   useEffect(() => {
     // Listen for custom trigger when customer places order in real-time
@@ -476,6 +530,9 @@ export default function AdminPanel({
       inStock: true,
       sizes: sizesArr,
       colors: colorsArr,
+      isAffiliateReady: newIsAffiliateReady,
+      affiliateCommission: parseFloat(newAffiliateCommission) || 0,
+      affCommission: Math.round(((parseFloat(newAffiliateCommission) || 0) / priceNum) * 100) || 8, // backwards compatible pct
       discountTag: originalPriceNum ? `${Math.round(((originalPriceNum - priceNum) / originalPriceNum) * 100)}% OFF` : "NEW"
     };
 
@@ -489,6 +546,8 @@ export default function AdminPanel({
     setNewImage("");
     setNewSizes("");
     setNewColors("");
+    setNewIsAffiliateReady(true);
+    setNewAffiliateCommission("100");
     setAddSuccessMessage("অভিনন্দন! আপনার নতুন পণ্যটি সফলভাবে স্টোরে যোগ করা হয়েছে।");
     setTimeout(() => {
       setAddSuccessMessage("");
@@ -655,7 +714,8 @@ export default function AdminPanel({
                 { id: "products", label: "পণ্য ইনভেন্টরি", icon: <Package className="w-3.5 h-3.5" /> },
                 { id: "add-product", label: "নতুন পণ্য যোগ করুন", icon: <Plus className="w-3.5 h-3.5" /> },
                 { id: "banners", label: "ব্যানার এডিটর 🎨", icon: <Image className="w-3.5 h-3.5" /> },
-                { id: "pixel", label: "Meta Pixel / Ads ⚙️", icon: <Layers className="w-3.5 h-3.5" /> }
+                { id: "pixel", label: "Meta Pixel / Ads ⚙️", icon: <Layers className="w-3.5 h-3.5" /> },
+                { id: "accounts", label: `ইউজার অ্যাকাউন্টস (${accounts.customers.length + accounts.merchants.length + accounts.affiliates.length}) 👥`, icon: <Users className="w-3.5 h-3.5" /> }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -1144,6 +1204,50 @@ export default function AdminPanel({
                           )}
                         </div>
 
+                        {/* Affiliate Program Configuration Inline */}
+                        <div className="flex items-center gap-2 bg-slate-950 p-2 border border-slate-850 rounded-xl flex-wrap">
+                          <label className="text-[10px] text-slate-400 font-mono select-none flex items-center gap-1.5 cursor-pointer font-bold">
+                            <input
+                              type="checkbox"
+                              checked={!!prod.isAffiliateReady}
+                              onChange={(e) => {
+                                const updated = products.map((item) =>
+                                  item.id === prod.id
+                                    ? { 
+                                        ...item, 
+                                        isAffiliateReady: e.target.checked,
+                                        affiliateCommission: item.affiliateCommission ?? 100
+                                      }
+                                    : item
+                                );
+                                onUpdateProducts(updated);
+                              }}
+                              className="accent-amber-400 rounded"
+                            />
+                            <span>এফিলিয়েট প্রোগ্রামে সচল</span>
+                          </label>
+
+                          {prod.isAffiliateReady && (
+                            <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 rounded-lg px-2 py-0.5 ml-1">
+                              <span className="text-[9px] text-slate-400">কমিশন:</span>
+                              <input
+                                type="number"
+                                value={prod.affiliateCommission ?? 100}
+                                onChange={(e) => {
+                                  let val = parseFloat(e.target.value);
+                                  if (isNaN(val)) val = 0;
+                                  const updated = products.map((item) =>
+                                    item.id === prod.id ? { ...item, affiliateCommission: val, affCommission: Math.round((val / item.price) * 100) || 8 } : item
+                                  );
+                                  onUpdateProducts(updated);
+                                }}
+                                className="w-12 bg-transparent text-[10px] font-mono text-amber-400 font-bold border-none focus:outline-none text-center p-0"
+                              />
+                              <span className="text-[9px] text-amber-500 font-bold">৳</span>
+                            </div>
+                          )}
+                        </div>
+
                         {/* Right Area: Availability Controls */}
                         <div className="flex items-center gap-3 shrink-0 flex-wrap justify-between w-full md:w-auto">
                           {/* Toggle switches */}
@@ -1414,6 +1518,50 @@ export default function AdminPanel({
                           className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl text-white focus:outline-none"
                         />
                       </div>
+                    </div>
+
+                    {/* Affiliate Program configuration fields */}
+                    <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-3 text-left">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label htmlFor="isAffiliateForm" className="block text-slate-300 font-bold text-xs cursor-pointer select-none mb-0.5">
+                            এফিলিয়েট প্রোগ্রামে যোগ করুন (Add to Affiliate Program)
+                          </label>
+                          <span className="text-[10px] text-slate-500 font-sans block leading-relaxed">
+                            অনুমোদন দিলে এফিলিয়েটরা তাদের ড্যাশবোর্ডে প্রোডাক্টটি দেখতে পাবে ও শেয়ার করতে পারবে।
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          id="isAffiliateForm"
+                          onClick={() => setNewIsAffiliateReady(!newIsAffiliateReady)}
+                          className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-200 cursor-pointer ${newIsAffiliateReady ? "bg-emerald-500" : "bg-slate-800"}`}
+                        >
+                          <div className={`w-5 h-5 rounded-full bg-white transition-all transform duration-200 ${newIsAffiliateReady ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+
+                      {newIsAffiliateReady && (
+                        <div className="pt-2.5 border-t border-slate-800/80">
+                          <label className="block text-slate-400 font-mono tracking-wider mb-1.5 uppercase">
+                            প্রতি বিক্রয়ে এফিলিয়েট কমিশন (৳ Amount / Taka) <span className="text-amber-500">*</span>
+                          </label>
+                          <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl px-3 focus-within:border-amber-400">
+                            <span className="text-amber-400 font-bold pr-2">৳</span>
+                            <input
+                              type="number"
+                              required={newIsAffiliateReady}
+                              placeholder="যেমনঃ 150 BDT"
+                              value={newAffiliateCommission}
+                              onChange={(e) => setNewAffiliateCommission(e.target.value)}
+                              className="w-full bg-transparent border-none focus:outline-none focus:ring-0 py-2.5 text-white text-xs font-semibold"
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-500 block mt-1.5 font-sans">
+                            কোনো এফিলিয়েট এই প্রোডাক্ট বিক্রি করলে সে সরাসরি এই টাকার অংকটি (৳) কমিশন ব্যালেন্স হিসেবে পাবে।
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <button
@@ -1895,6 +2043,281 @@ export default function AdminPanel({
                 </div>
               )}
 
+              {activeTab === "accounts" && (() => {
+                const allAccountsList = [
+                  ...(accounts.customers || []).map((c) => ({ ...c, role: "customer", roleLabel: "কাস্টমার (Customer)" })),
+                  ...(accounts.merchants || []).map((m) => ({ ...m, role: "merchant", roleLabel: "মার্চেন্ট (Merchant)" })),
+                  ...(accounts.affiliates || []).map((a) => ({ ...a, role: "affiliate", roleLabel: "এফিলিয়েট (Affiliate)" }))
+                ];
+
+                const filteredAccounts = allAccountsList.filter((acc) => {
+                  if (accountFilter !== "all" && acc.role !== accountFilter) return false;
+                  if (accountSearch.trim()) {
+                    const q = accountSearch.toLowerCase();
+                    const matchName = (acc.name || "").toLowerCase().includes(q);
+                    const matchPhone = (acc.phone || "").toLowerCase().includes(q);
+                    const matchId = (acc.id || "").toLowerCase().includes(q);
+                    const matchShopName = acc.shopName ? acc.shopName.toLowerCase().includes(q) : false;
+                    return matchName || matchPhone || matchId || matchShopName;
+                  }
+                  return true;
+                });
+
+                return (
+                  <div className="space-y-6" id="admin-accounts-list-view">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                      <div>
+                        <h3 className="text-sm font-display font-medium text-white uppercase tracking-wider">
+                          ইউজার অ্যাকাউন্টস ম্যানেজার (Registered Accounts Desk)
+                        </h3>
+                        <p className="text-[10px] text-slate-450 font-mono mt-0.5">
+                          ওয়েবসাইটের সমস্ত নিবন্ধিত কাস্টমার, মার্চেন্ট এবং এফিলিয়েট অ্যাকাউন্ট ও পাসওয়ার্ড ট্র্যাকার।
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={loadAccounts}
+                        disabled={loadingAccounts}
+                        className="px-3 py-1.5 text-xs bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50 select-none"
+                      >
+                        {loadingAccounts ? (
+                          <>
+                            <span className="animate-spin rounded-full h-3 w-3 border-b-2 border-slate-950"></span>
+                            <span>লোডিং...</span>
+                          </>
+                        ) : (
+                          <span>🔄 রিফ্রেশ অ্যাকাউন্ট তালিকা</span>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Summary Row */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 shadow-sm text-left">
+                        <span className="text-[10px] font-mono tracking-wider font-extrabold text-[#38bdf8] uppercase">
+                          কাস্টমার একাউন্ট
+                        </span>
+                        <p className="text-lg sm:text-2xl font-display font-black text-white mt-1">
+                          {accounts.customers.length} <span className="text-xs text-slate-400">টি</span>
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 shadow-sm text-left">
+                        <span className="text-[10px] font-mono tracking-wider font-extrabold text-emerald-400 uppercase">
+                          মার্চেন্ট একাউন্ট
+                        </span>
+                        <p className="text-lg sm:text-2xl font-display font-black text-white mt-1">
+                          {accounts.merchants.length} <span className="text-xs text-slate-400">টি</span>
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 shadow-sm text-left">
+                        <span className="text-[10px] font-mono tracking-wider font-extrabold text-purple-400 uppercase">
+                          এফিলিয়েট একাউন্ট
+                        </span>
+                        <p className="text-lg sm:text-2xl font-display font-black text-white mt-1">
+                          {accounts.affiliates.length} <span className="text-xs text-slate-400">টি</span>
+                        </p>
+                      </div>
+                      <div className="p-4 rounded-xl border border-slate-800 bg-slate-900 shadow-sm text-left bg-gradient-to-br from-slate-900 to-slate-850">
+                        <span className="text-[10px] font-mono tracking-wider font-extrabold text-amber-400 uppercase">
+                          সর্বমোট অ্যাকাউন্টস
+                        </span>
+                        <p className="text-lg sm:text-2xl font-display font-black text-amber-400 mt-1">
+                          {accounts.customers.length + accounts.merchants.length + accounts.affiliates.length} <span className="text-xs text-slate-400">টি</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Filter and Search controls */}
+                    <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center bg-slate-900 p-4 border border-slate-800 rounded-xl">
+                      {/* Tabs Filter */}
+                      <div className="flex flex-wrap items-center gap-1 shrink-0">
+                        {[
+                          { id: "all", label: `সব একাউন্ট (${allAccountsList.length})` },
+                          { id: "customer", label: `কাস্টমার (${accounts.customers.length})` },
+                          { id: "merchant", label: `মার্চেন্ট (${accounts.merchants.length})` },
+                          { id: "affiliate", label: `এফিলিয়েট (${accounts.affiliates.length})` }
+                        ].map((btn) => (
+                          <button
+                            key={btn.id}
+                            type="button"
+                            onClick={() => setAccountFilter(btn.id as any)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer ${accountFilter === btn.id ? "bg-amber-400 text-slate-950 font-bold" : "text-slate-400 hover:text-white bg-slate-950/40"}`}
+                          >
+                            {btn.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Search box tool */}
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          placeholder="নাম, মোবাইল নম্বর, বা আইডি দিয়ে সার্চ করুন..."
+                          value={accountSearch}
+                          onChange={(e) => setAccountSearch(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 focus:border-amber-450 focus:outline-none rounded-lg px-3.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 font-sans"
+                        />
+                      </div>
+                    </div>
+
+                    {accountsError && (
+                      <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-455 text-xs text-left font-mono">
+                        {accountsError}
+                      </div>
+                    )}
+
+                    {/* Loader Grid */}
+                    {loadingAccounts ? (
+                      <div className="py-24 text-center">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-400 mx-auto mb-3"></div>
+                        <p className="text-xs text-slate-400 font-medium font-sans">নিবন্ধিত অ্যাকাউন্ট ডেটাফেজ লোড হচ্ছে...</p>
+                      </div>
+                    ) : filteredAccounts.length === 0 ? (
+                      <div className="py-16 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/40">
+                        <Users className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+                        <p className="text-xs text-slate-400 font-sans">কোনো নিবন্ধিত অ্যাকাউন্ট খুঁজে পাওয়া যায়নি।</p>
+                        {accountSearch.trim() && (
+                          <p className="text-[10px] text-slate-500 mt-1 font-sans">
+                            আপনার সার্চ ক্যোয়ারী পরিবর্তন করুন অথবা ফিল্টারগুলো ক্লিয়ার করে পুনুরায় চেষ্টা করুন।
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {filteredAccounts.map((acc, idx) => {
+                          const isRevealed = revealedPasswords[acc.id] || false;
+                          const regDate = (() => {
+                            try {
+                              const tsStr = acc.id.split("-")[1];
+                              if (tsStr && !isNaN(Number(tsStr))) {
+                                return new Date(Number(tsStr)).toLocaleString("bn-BD", { dateStyle: "medium", timeStyle: "short" });
+                              }
+                            } catch {}
+                            return "পূর্ববর্তী ডেমো";
+                          })();
+
+                          return (
+                            <div 
+                              key={acc.id || idx}
+                              className="bg-slate-900 border border-slate-850 hover:border-slate-750 transition-all rounded-xl p-4 flex flex-col justify-between text-left space-y-3 shadow-md border-t-2 border-t-amber-400/20"
+                            >
+                              {/* Card Header Label */}
+                              <div className="flex items-center justify-between border-b border-slate-850 pb-2 gap-1">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {acc.avatar ? (
+                                    <img src={acc.avatar} alt={acc.name} className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0" />
+                                  ) : (
+                                    <div className="w-7 h-7 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs uppercase border border-slate-700 shrink-0 select-none">
+                                      {acc.name ? acc.name.charAt(0) : "U"}
+                                    </div>
+                                  )}
+                                  <div className="min-w-0">
+                                    <h4 className="text-xs font-bold text-white truncate max-w-[150px]">{acc.name || "Unknown"}</h4>
+                                    <span className="text-[9px] text-slate-500 font-mono block truncate">{acc.id}</span>
+                                  </div>
+                                </div>
+
+                                <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded border shrink-0 select-none ${
+                                  acc.role === "merchant" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" :
+                                  acc.role === "affiliate" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                                  "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                                }`}>
+                                  {acc.roleLabel}
+                                </span>
+                              </div>
+
+                              {/* Card Content Table Form */}
+                              <div className="space-y-2 text-xs">
+                                {/* Mobile Row */}
+                                <div className="flex items-center justify-between bg-slate-950/40 p-1.5 rounded border border-slate-850">
+                                  <div className="flex flex-col">
+                                    <span className="text-[9px] text-slate-500 font-mono uppercase">মোবাইল নম্বর</span>
+                                    <span className="font-bold text-amber-400 font-mono tracking-wide">{acc.phone}</span>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(acc.phone);
+                                      setCopiedAccItem(acc.id + "-phone");
+                                      setTimeout(() => setCopiedAccItem(""), 2000);
+                                    }}
+                                    type="button"
+                                    className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                                    title="মোবাইল কপি করুন"
+                                  >
+                                    {copiedAccItem === acc.id + "-phone" ? (
+                                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {/* Password Row */}
+                                <div className="flex items-center justify-between bg-slate-950/40 p-1.5 rounded border border-slate-850">
+                                  <div className="flex flex-col">
+                                    <span className="text-[9px] text-slate-500 font-mono uppercase">পাসওয়ার্ড</span>
+                                    <span className="font-mono font-bold text-white tracking-wider">
+                                      {isRevealed ? acc.password : "••••••••"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => setRevealedPasswords(prev => ({ ...prev, [acc.id]: !isRevealed }))}
+                                      className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                                      title={isRevealed ? "পাসওয়ার্ড লুকান" : "পাসওয়ার্ড দেখুন"}
+                                    >
+                                      {isRevealed ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(acc.password || "");
+                                        setCopiedAccItem(acc.id + "-pwd");
+                                        setTimeout(() => setCopiedAccItem(""), 2000);
+                                      }}
+                                      type="button"
+                                      className="p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded transition-colors cursor-pointer"
+                                      title="পাসওয়ার্ড কপি করুন"
+                                    >
+                                      {copiedAccItem === acc.id + "-pwd" ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Custom fields logic */}
+                                {acc.role === "merchant" && (
+                                  <div className="bg-slate-950/20 p-2 rounded border border-slate-850 text-[11px] leading-relaxed text-slate-400 space-y-1">
+                                    <p><strong className="text-slate-300">দোকানের নাম:</strong> {acc.shopName || "N/A"}</p>
+                                    {acc.address && <p><strong className="text-slate-300">ঠিকানা:</strong> {acc.address}</p>}
+                                  </div>
+                                )}
+
+                                {acc.role === "affiliate" && (
+                                  <div className="bg-slate-950/20 p-2 rounded border border-slate-850 text-[11px] leading-relaxed text-slate-400 space-y-1">
+                                    <p><strong className="text-slate-300">শেয়ার কোড:</strong> <span className="font-mono text-pink-400">{acc.shareId || acc.phone}</span></p>
+                                    <p><strong className="text-slate-300">এফিলিয়েট কমিশন ব্যালেন্স:</strong> ৳{acc.earningsBalance !== undefined ? acc.earningsBalance : 0}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Card Footer timestamp extraction */}
+                              <div className="pt-2 border-t border-slate-850/60 flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                                <span>রেজিস্ট্রেশন সময়:</span>
+                                <span>{regDate}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}

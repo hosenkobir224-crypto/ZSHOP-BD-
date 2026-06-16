@@ -16,6 +16,9 @@ export interface Product {
   colors?: string[];
   merchantPhone?: string;
   merchantShopName?: string;
+  isAffiliateReady?: boolean;
+  affiliateCommission?: number;
+  affCommission?: number;
 }
 
 export interface CartItem {
