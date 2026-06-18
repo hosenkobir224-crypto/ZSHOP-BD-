@@ -530,7 +530,7 @@ export default function ProductDetailModal({
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-[#f8fafc] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-28 font-sans"
+      className="fixed inset-0 z-50 bg-[#f8fafc] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-28 font-sans"
       id="product-detail-mobile-page"
     >
       {/* 1. Header Navigation Bar (Screenshot Style) */}
@@ -634,7 +634,7 @@ export default function ProductDetailModal({
       <div className="max-w-6xl mx-auto w-full px-4 pt-4 pb-12 flex-1">
         
         {/* Breadcrumb section matches picture */}
-        <div className="text-[11px] sm:text-xs text-gray-500 font-sans mb-4 flex items-center flex-wrap gap-1 bg-white p-2.5 px-4 rounded-xl border border-gray-100 shadow-3xs">
+        <div className="hidden md:flex text-[11px] sm:text-xs text-gray-500 font-sans mb-4 items-center flex-wrap gap-1 bg-white p-2.5 px-4 rounded-xl border border-gray-100 shadow-3xs">
           <span className="hover:text-[#f85606] cursor-pointer" onClick={onClose}>Home</span>
           <span className="text-gray-300 font-bold">&gt;</span>
           <span className="hover:text-[#f85606] cursor-pointer capitalize">
@@ -782,8 +782,60 @@ export default function ProductDetailModal({
             {/* Call Action Control boxes */}
             <div className="bg-[#fcfdff] p-5 rounded-xl border border-blue-50/50 space-y-5">
               
+              {/* Color Selector */}
+              {product.colors && product.colors.length > 0 && (
+                <div className="space-y-2.5 text-left">
+                  <span className="text-[11px] font-black text-slate-550 uppercase tracking-widest block">পছন্দের কালার সিলেক্ট করুন:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {product.colors.map((color) => {
+                      const isSelected = selectedColor === color;
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setSelectedColor(color)}
+                          className={`px-3.5 py-2 text-xs font-bold rounded-lg border-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-[#f85606] bg-orange-50/50 text-[#f85606] shadow-3xs"
+                              : "border-gray-200 bg-white text-slate-700 hover:border-gray-300"
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selector */}
+              {product.sizes && product.sizes.length > 0 && (
+                <div className="space-y-2.5 text-left">
+                  <span className="text-[11px] font-black text-slate-550 uppercase tracking-widest block">সাইজ সিলেক্ট করুন:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((size) => {
+                      const isSelected = selectedSize === size;
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => setSelectedSize(size)}
+                          className={`w-11 h-11 flex items-center justify-center text-xs font-black rounded-lg border-2 transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-[#f85606] bg-orange-50/50 text-[#f85606] shadow-3xs"
+                              : "border-gray-200 bg-white text-slate-700 hover:border-gray-355"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Quantity selector */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between border-t border-gray-100/60 pt-4">
                 <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Purchase Quantity:</span>
                 <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-9">
                   <button
@@ -1185,43 +1237,46 @@ export default function ProductDetailModal({
 
       </div>
 
-      {/* FOOTER TAB MENU BAR matches preview screenshot layout exactly */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-full bg-white border-t border-gray-200 py-3 px-4 flex items-center justify-around text-center shadow-lg z-45">
-        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-800 transition hover:text-slate-900 group">
-          <span className="text-lg text-slate-900">🏠</span>
-          <span className="text-[10px] font-semibold mt-0.5 text-[#000]">Home</span>
-        </button>
-        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group">
-          <span className="text-lg">🗂</span>
-          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Categories</span>
-        </button>
-        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group">
-          <span className="text-lg animate-pulse">🔥</span>
-          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Deals</span>
-        </button>
+      {/* MOBILE-ONLY STICKY PURCHASE ACTION BAR (Daraz/Amazon Style) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 py-2 py-safe px-4 flex items-center justify-between gap-3 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] z-45 select-none animate-slideUp">
+        
+        {/* Back/Store Button */}
         <button 
-          onClick={() => {
-            onClose();
-            // Open user profile to review orders
-            const anchor = document.getElementById("header-profile-trigger");
-            if (anchor) anchor.click();
-          }} 
-          className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group"
+          onClick={onClose} 
+          className="flex flex-col items-center justify-center text-[10px] font-bold text-slate-500 w-11 hover:text-[#f85606] transition duration-150 focus:outline-none cursor-pointer"
         >
-          <span className="text-lg">📦</span>
-          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Orders</span>
+          <Home className="w-[19px] h-[19px] text-slate-700 stroke-[2.2]" />
+          <span className="mt-0.5 font-sans">হোম</span>
         </button>
+
+        {/* Chat Support Button */}
         <button 
-          onClick={() => {
-            onClose();
-            // Open user profile
-            const anchor = document.getElementById("header-profile-trigger");
-            if (anchor) anchor.click();
-          }} 
-          className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group"
+          onClick={() => alert("কানেক্টিং উইথ কাস্টমার রিলেশন হাব...")} 
+          className="flex flex-col items-center justify-center text-[10px] font-bold text-slate-500 w-11 hover:text-[#f85606] transition duration-150 focus:outline-none cursor-pointer"
         >
-          <span className="text-lg">👤</span>
-          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Account</span>
+          <MessageSquare className="w-[19px] h-[19px] text-slate-700 stroke-[2.2]" />
+          <span className="mt-0.5 font-sans">চ্যাট</span>
+        </button>
+
+        {/* Buy Now (Yellow Orange gradient) */}
+        <button
+          onClick={handleBuyNowTrigger}
+          className="flex-1 h-11 flex flex-col items-center justify-center bg-[#fdb900] hover:bg-[#e4a600] active:scale-97 text-white font-black rounded-xl focus:outline-none transition-transform cursor-pointer shadow-sm text-center"
+        >
+          <span className="text-[11px] font-extrabold tracking-wide uppercase leading-none">Buy Now</span>
+          <span className="text-[10px] font-semibold mt-0.5 leading-none">৳{formatBDT(product.price * quantity)}</span>
+        </button>
+
+        {/* Add to Cart (Daraz Orange) */}
+        <button
+          onClick={handleAddToCart}
+          className={`flex-1 h-11 flex items-center justify-center bg-[#f85606] hover:bg-[#d64a05] active:scale-97 text-white rounded-xl font-black text-xs uppercase focus:outline-none transition-all cursor-pointer shadow-sm ${addedMessage ? "bg-emerald-600 hover:bg-emerald-600" : ""}`}
+        >
+          {addedMessage ? (
+            <span className="text-[11px] font-extrabold flex items-center gap-1">✔ Added to Cart</span>
+          ) : (
+            <span>Add to Cart</span>
+          )}
         </button>
       </div>
 
