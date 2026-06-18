@@ -3075,14 +3075,48 @@ export default function CustomerProfile({
                                 </div>
                               </div>
 
-                              <button 
-                                type="button"
-                                onClick={() => handleMerchantDeleteProduct(p.id)}
-                                className="text-red-500 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors active:scale-95 shrink-0"
-                                title="মুছে ফেলুন"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                  type="button"
+                                  onClick={() => {
+                                    try {
+                                      const url = `${window.location.origin}${window.location.pathname}?product=${p.id}`;
+                                      navigator.clipboard.writeText(url);
+                                      setCopiedProductId(p.id);
+                                      setTimeout(() => setCopiedProductId(null), 2000);
+                                    } catch (err) {
+                                      console.error("Failed to copy link:", err);
+                                    }
+                                  }}
+                                  className={`p-1.5 px-2.5 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 font-bold border ${
+                                    copiedProductId === p.id 
+                                      ? "text-emerald-700 bg-emerald-50 border-emerald-200" 
+                                      : "text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-100"
+                                  }`}
+                                  title="কপি প্রোডাক্ট লিংক (Copy Direct Link)"
+                                >
+                                  {copiedProductId === p.id ? (
+                                    <>
+                                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                      <span className="text-[9px] font-sans">কপি হয়েছে!</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Link className="w-3.5 h-3.5 text-amber-500" />
+                                      <span className="text-[9px] font-sans text-amber-700">লিংক কপি</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                <button 
+                                  type="button"
+                                  onClick={() => handleMerchantDeleteProduct(p.id)}
+                                  className="text-red-500 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors active:scale-95"
+                                  title="মুছে ফেলুন"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
