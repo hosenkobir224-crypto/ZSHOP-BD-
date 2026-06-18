@@ -234,7 +234,7 @@ export default function CartDrawer({
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex justify-end" 
+      className="fixed inset-0 z-[100] flex justify-end" 
       id="cart-drawer-panel"
       role="dialog"
       aria-modal="true"

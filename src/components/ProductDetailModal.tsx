@@ -530,7 +530,7 @@ export default function ProductDetailModal({
 
   return (
     <div 
-      className="fixed inset-0 z-50 bg-[#f8fafc] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-28 font-sans"
+      className="fixed inset-0 z-[90] bg-[#f8fafc] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-28 font-sans"
       id="product-detail-mobile-page"
     >
       {/* 1. Header Navigation Bar (Screenshot Style) */}

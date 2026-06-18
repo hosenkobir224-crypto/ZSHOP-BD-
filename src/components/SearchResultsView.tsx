@@ -148,7 +148,7 @@ export default function SearchResultsView({
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-[#f1f5f9] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start"
+      className="absolute inset-0 z-40 bg-[#f1f5f9] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start"
       id="search-results-overlay-page"
     >
       {/* 1. Header Search Bar Area */}
