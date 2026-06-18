@@ -843,6 +843,7 @@ export default function App() {
             setIsCartOpen(true);
           }, 150);
         }}
+        setSearchQuery={setSearchQuery}
       />
 
       {/* Smooth back to top trigger */}

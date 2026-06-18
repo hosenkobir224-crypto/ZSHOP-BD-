@@ -60,6 +60,7 @@ interface ProductDetailModalProps {
   onBuyNowWithSpecs?: (product: Product, quantity: number, color?: string, size?: string) => void;
   products?: Product[]; // Pass full products catalog for related recommendations
   onSelectProduct?: (product: Product) => void; // Support swapping active product
+  setSearchQuery?: (query: string) => void;
 }
 
 function getCategorySpecs(category: string) {
@@ -95,6 +96,7 @@ export default function ProductDetailModal({
   onBuyNowWithSpecs,
   products = [],
   onSelectProduct,
+  setSearchQuery,
 }: ProductDetailModalProps) {
   // Option Selectors
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -102,6 +104,7 @@ export default function ProductDetailModal({
   const [quantity, setQuantity] = useState<number>(1);
   const [addedMessage, setAddedMessage] = useState<boolean>(false);
   const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
+  const [modalSearchText, setModalSearchText] = useState<string>("");
 
   // Gallery Active View
   const [activeImage, setActiveImage] = useState<string>("");
@@ -615,14 +618,45 @@ export default function ProductDetailModal({
             <span className="text-gray-400">🔍</span>
             <input
               type="text"
-              readOnly
-              value={product.category === "watches" ? "Search matching clothes, watches" : "Search in ZSHOP BD"}
-              className="w-full text-xs font-medium text-slate-400 bg-transparent focus:outline-none pr-1 select-none pointer-events-none"
+              value={modalSearchText}
+              onChange={(e) => setModalSearchText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  if (setSearchQuery) {
+                    const fallbackQuery = product ? (product.category === "watches" ? "watches" : "clothing") : "";
+                    const finalQuery = modalSearchText.trim() || fallbackQuery;
+                    setSearchQuery(finalQuery);
+                    onClose();
+                  }
+                }
+              }}
+              placeholder={product ? (product.category === "watches" ? "Search matching clothes, watches" : "Search in ZSHOP BD") : "Search in ZSHOP BD"}
+              className="w-full text-xs font-medium text-slate-800 bg-transparent focus:outline-none pr-1"
             />
           </div>
           <div className="flex items-center gap-2">
-            <Camera className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" />
-            <button className="bg-[#0b1120] hover:bg-slate-800 text-white p-2 px-3 rounded-lg text-xs font-bold transition">
+            <Camera 
+              className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" 
+              onClick={() => {
+                // If they click camera, search for "watches" or "clothing" as a fallback demo index search
+                if (setSearchQuery) {
+                  const query = product ? (product.category === "watches" ? "watches" : "clothing") : "";
+                  setSearchQuery(query);
+                  onClose();
+                }
+              }}
+            />
+            <button 
+              onClick={() => {
+                if (setSearchQuery) {
+                  const fallbackQuery = product ? (product.category === "watches" ? "watches" : "clothing") : "";
+                  const finalQuery = modalSearchText.trim() || fallbackQuery;
+                  setSearchQuery(finalQuery);
+                  onClose();
+                }
+              }}
+              className="bg-[#0b1120] hover:bg-slate-800 text-white p-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer"
+            >
               <Search className="w-3.5 h-3.5 stroke-[2.5]" />
             </button>
           </div>
