@@ -3069,7 +3069,37 @@ export default function CustomerProfile({
                                             className="w-10 bg-transparent text-rose-600 font-bold text-center py-0 p-0 border-none focus:outline-none"
                                           />
                                         </div>
-                                                  {/* Affiliate Registration */}
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              <button 
+                                type="button"
+                                onClick={() => handleMerchantDeleteProduct(p.id)}
+                                className="text-red-500 hover:text-rose-600 p-1.5 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors active:scale-95 shrink-0"
+                                title="মুছে ফেলুন"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ================================================================ */}
+          {/* ===================== AFFILIATE FLOW =========================== */}
+          {/* ================================================================ */}
+          {userType === "affiliate" && (
+            <>
+              {/* Affiliate Registration */}
               {mode === "register" && (
                 <div className="space-y-3 sm:space-y-4" id="affiliate-register-step">
                   <div className="text-center space-y-0.5">
@@ -3150,27 +3180,10 @@ export default function CustomerProfile({
                         <input
                           type="text"
                           required
-                          placeholder="যে�              )}
-
-              {/* Affiliate Dashboard Area */}="text-emerald-500 font-bold hover:underline cursor-pointer font-sans ml-1"
-                      >
-                        এখানে এফিলিয়েট অ্যাকাউন্ট সাইন আপ করুন
-                      </button>
-                    </p>
-                  </div>
-                </div>
-              )}ext-gray-500 uppercase mb-1">
-                        Mobile Number (মোবাইল নম্বর - যা এফিলিয়েট আইডি হিসেবে কাজ করবে)
-                      </label>
-                      <div className="relative">
-                        <Smartphone className="absolute left-3.5 top-3 w-4 h-4 text-gray-400" />
-                        <input
-                          type="text"
-                          required
                           placeholder="যেমন: 01712345678"
                           value={affPhone}
                           onChange={(e) => setAffPhone(e.target.value)}
-                          className="w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-200 focus:border-emerald-400 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
+                          className="w-full pl-9 pr-3.5 py-1.5 sm:py-2.5 bg-white border border-gray-200 focus:border-emerald-400 rounded-xl text-xs text-slate-800 focus:outline-none font-mono"
                         />
                       </div>
                     </div>
