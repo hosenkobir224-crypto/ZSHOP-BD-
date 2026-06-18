@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { Search, X, ShoppingBag, HelpCircle, ChevronLeft, Camera, SlidersHorizontal, MapPin, Sparkles } from "lucide-react";
+import { Search, X, ShoppingBag, HelpCircle, ChevronLeft, Camera, SlidersHorizontal, MapPin, Sparkles, Star, Zap, ShoppingCart, ShieldCheck } from "lucide-react";
 import { Product } from "../types";
 
 interface SearchResultsViewProps {
@@ -10,6 +10,30 @@ interface SearchResultsViewProps {
   onOrderNow: (product: Product) => void;
   onOpenQuickView: (product: Product) => void;
 }
+
+const englishToBanglaDigits: { [key: string]: string } = {
+  '0': '০',
+  '1': '১',
+  '2': '২',
+  '3': '৩',
+  '4': '৪',
+  '5': '৫',
+  '6': '৬',
+  '7': '৭',
+  '8': '৮',
+  '9': '৯',
+};
+
+const toBanglaNumber = (numStr: string) => {
+  return numStr.split('').map(char => englishToBanglaDigits[char] || char).join('');
+};
+
+const formatBDT = (amount: number) => {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
 export default function SearchResultsView({
   searchQuery,
@@ -300,74 +324,124 @@ export default function SearchResultsView({
           <div className="grid grid-cols-2 gap-2 p-2" id="search-grid-listings">
             {filteredSearchProducts.map((product) => {
               const locationLabel = getProductLocation(product.id);
-              const soldCount = getProductSoldCount(product.id);
-              const coinsSaving = getCoinsDiscount(product.id);
-              
+              const discountPercentNum = product.originalPrice && product.originalPrice > product.price
+                ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+                : 0;
+
               return (
                 <div 
                   key={product.id}
                   onClick={() => onOpenQuickView(product)}
-                  className="bg-white rounded-xl overflow-hidden border border-gray-150 flex flex-col hover:shadow-md transition-shadow cursor-pointer duration-200 group"
+                  className="group bg-white border border-gray-100 rounded-lg overflow-hidden hover:shadow-lg transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                  id={`search-card-${product.id}`}
                 >
-                  {/* Image Viewport */}
-                  <div className="relative aspect-square w-full overflow-hidden bg-slate-100">
+                  {/* Product Image Area */}
+                  <div className="relative aspect-square overflow-hidden bg-[#f4f4f6] shrink-0">
                     <img
                       src={product.image}
                       alt={product.title}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover object-center group-hover:scale-[1.03] transition-transform duration-500 ease-out"
                     />
 
-                    {/* Left corner campaign tag */}
-                    {product.discountTag && (
-                      <span className="absolute top-2 left-2 bg-[#f85606] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded-sm shadow-xs uppercase tracking-wider">
-                        {product.discountTag}
-                      </span>
-                    )}
-                  </div>
+                    {/* Outer Shadow Vignette */}
+                    <div className="absolute inset-0 bg-black/3 pointer-events-none" />
 
-                  {/* Standard Delivery & Promo Badges Bar directly nested inside Card */}
-                  <div className="flex flex-wrap items-center gap-1.5 px-2 pt-1.5 shrink-0">
-                    {/* Free Delivery Tag */}
-                    <span className="bg-[#00b4a0] text-white text-[8px] font-black px-1 rounded-xs uppercase tracking-wide">
-                      FREE DELIVERY
-                    </span>
-                    {/* Coins Badge */}
-                    <span className="bg-[#ff9900] text-black text-[8px] font-black px-1 rounded-xs uppercase tracking-wide flex items-center gap-0.5">
-                      🪙 COINS
-                    </span>
-                  </div>
-
-                  {/* Card Title */}
-                  <h3 className="text-[11px] font-semibold text-slate-800 leading-tight line-clamp-2 px-2 pt-1.5 min-h-[30px]">
-                    {product.title}
-                  </h3>
-
-                  {/* Price & Sold section */}
-                  <div className="px-2 pt-1.5 flex flex-wrap items-center justify-between gap-1 leading-none">
-                    <span className="text-xs font-black text-[#f85606] font-display">
-                      ৳ {product.price.toLocaleString("en-US")}
-                    </span>
-                    <span className="text-[9px] text-gray-400 font-medium">
-                      {soldCount} sold
-                    </span>
-                  </div>
-
-                  {/* Extra Saving Coins Tag */}
-                  {coinsSaving > 0 && (
-                    <div className="px-2 pt-1 font-sans">
-                      <span className="text-[9px] text-amber-600 font-extrabold bg-amber-50 border border-amber-100 rounded-sm px-1 py-0.5">
-                        Coins save ৳ {coinsSaving}
+                    {/* ZSHOP BD MALL SELLER badge */}
+                    <div className="absolute top-2 left-2 flex flex-col gap-1 z-15">
+                      <span className="px-1.5 py-0.5 text-[8px] font-sans font-black text-white bg-slate-950 rounded-xs uppercase tracking-wider flex items-center gap-0.5 shadow-sm">
+                        <ShieldCheck className="w-2.5 h-2.5 text-amber-400 fill-amber-400" />
+                        <span>ZSHOP BD MALL SELLER</span>
                       </span>
                     </div>
-                  )}
+                  </div>
 
-                  {/* Rating & Location Footer bar */}
-                  <div className="flex items-center justify-between text-[9px] text-gray-400 px-2 pb-2.5 pt-1.5 mt-auto">
-                    <div className="flex items-center gap-0.5 font-bold text-amber-500">
-                      ★ <span className="text-slate-700 text-[9px]">{product.rating.toFixed(1)}</span>
+                  {/* Product Metadata Area */}
+                  <div className="p-3 flex flex-col flex-1 justify-between gap-2.5 text-left bg-white">
+                    <div>
+                      {/* Title */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenQuickView(product);
+                        }}
+                        className="block text-xs sm:text-[13px] font-normal text-[#212121] hover:text-[#f85606] transition-colors text-left font-sans line-clamp-2 leading-tight cursor-pointer focus:outline-none h-9 mt-0.5 overflow-hidden"
+                      >
+                        {product.title}
+                      </button>
+
+                      {/* Rating with design */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex items-center text-[#faca51]">
+                          <Star className="w-2.5 h-2.5 fill-[#faca51] stroke-[#faca51]" />
+                        </div>
+                        <span className="text-[10px] sm:text-xs font-semibold text-[#757575] leading-none">{product.rating.toFixed(1)}</span>
+                        <span className="text-[10px] sm:text-[11px] text-[#9e9e9e]">({product.reviewsCount})</span>
+                      </div>
                     </div>
-                    <span className="truncate max-w-[65px]">{locationLabel}</span>
+
+                    <div>
+                      {/* Price & Discount */}
+                      <div className="space-y-0.5">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-[15px] sm:text-[17px] font-bold text-[#f85606]">
+                            ৳{toBanglaNumber(formatBDT(product.price))}
+                          </span>
+                        </div>
+                        {product.originalPrice && product.originalPrice > product.price && (
+                          <div className="flex items-center gap-1.5 flex-wrap min-h-[16px]">
+                            <span className="text-[11px] sm:text-xs text-[#9e9e9e] line-through">
+                              ৳{toBanglaNumber(formatBDT(product.originalPrice))}
+                            </span>
+                            {discountPercentNum > 0 && (
+                              <span className="text-[10px] sm:text-[11px] font-semibold text-[#f85606]">
+                                {discountPercentNum}% OFF
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Location & Stock Status Row */}
+                      <div className="text-[10px] text-[#9e9e9e] font-sans mt-2.5 border-t border-gray-100 pt-1.5 flex items-center justify-between">
+                        <span>🏠 Bangladesh</span>
+                        {product.inStock && <span className="text-[9px] text-[#25a55f] font-semibold">In Stock</span>}
+                      </div>
+
+                      {/* CTA Buttons Row */}
+                      <div className="mt-2.5 space-y-1.5">
+                        {product.inStock ? (
+                          <>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onOrderNow(product);
+                              }}
+                              className="w-full py-2 bg-[#f85606] hover:bg-[#d64a05] text-white rounded text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer focus:outline-none shadow-xs uppercase tracking-wider"
+                            >
+                              <span>⚡ ORDER NOW</span>
+                            </button>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAddToCart(product);
+                              }}
+                              className="w-full py-1.5 bg-[#eff0f5] hover:bg-[#e2e3e8] text-[#212121] rounded text-[11px] font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer focus:outline-none"
+                            >
+                              <span>🛒 Add to Cart</span>
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            disabled
+                            className="w-full py-2 bg-[#f4f4f4] text-[#9e9e9e] rounded text-xs font-semibold cursor-not-allowed"
+                          >
+                            <span>Stock Out</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
