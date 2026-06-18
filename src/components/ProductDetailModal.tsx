@@ -28,9 +28,12 @@ import {
   Home,
   SlidersHorizontal,
   Compass,
-  Play
+  Play,
+  User,
+  Search
 } from "lucide-react";
 import { Product } from "../types";
+import { PRODUCTS } from "../data";
 
 interface Review {
   id: string;
@@ -57,6 +60,31 @@ interface ProductDetailModalProps {
   onBuyNowWithSpecs?: (product: Product, quantity: number, color?: string, size?: string) => void;
   products?: Product[]; // Pass full products catalog for related recommendations
   onSelectProduct?: (product: Product) => void; // Support swapping active product
+}
+
+function getCategorySpecs(category: string) {
+  if (category === "watches") {
+    return [
+      { text: "Genuine Stainless Steel", icon: "✏" },
+      { text: "Mineral Glass Dial Face", icon: "🔲" },
+      { text: "50M Water Resistance", icon: "💧" },
+      { text: "Chronograph Function", icon: "⏱" }
+    ];
+  } else if (category === "clothing") {
+    return [
+      { text: "100% Combed Cotton Fabric", icon: "✏" },
+      { text: "Premium High-Density Sewing", icon: "🔲" },
+      { text: "Lifetime Color Bleed Proof", icon: "💧" },
+      { text: "Classic Comfort Silhouette", icon: "⏱" }
+    ];
+  } else {
+    return [
+      { text: "Authentic Quality Materials", icon: "✏" },
+      { text: "Built for Modern Longevity", icon: "🔲" },
+      { text: "IPX5 Splash Resistance", icon: "💧" },
+      { text: "100% Genuine Certified Goods", icon: "⏱" }
+    ];
+  }
 }
 
 export default function ProductDetailModal({
@@ -502,582 +530,698 @@ export default function ProductDetailModal({
 
   return (
     <div 
-      className="absolute inset-0 z-50 bg-[#f1f5f9] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-24"
+      className="absolute inset-0 z-50 bg-[#f8fafc] overflow-y-auto animate-fadeIn flex flex-col items-stretch justify-start pb-28 font-sans"
       id="product-detail-mobile-page"
     >
-      {/* 1. Header Navigation Bar (Daraz Style) */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-150 px-3 py-2 flex items-center justify-between gap-1.5 shadow-xs">
-        {/* Back Button */}
-        <button
-          onClick={onClose}
-          className="p-1 px-1.5 focus:outline-none hover:bg-slate-100 rounded-full transition-colors shrink-0"
-          title="সার্চ থেকে ফিরে যান"
-        >
-          <ChevronLeft className="w-6 h-6 text-slate-800 stroke-[2.5]" />
-        </button>
+      {/* 1. Header Navigation Bar (Screenshot Style) */}
+      <div className="sticky top-0 z-35 bg-white border-b border-gray-100 px-4 py-3 flex flex-col gap-3 shadow-xs">
+        
+        {/* Row 1: Logo & Actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {/* Hamburger / Back Button */}
+            <button
+              onClick={onClose}
+              className="p-1 px-1.5 focus:outline-none hover:bg-slate-50 rounded-lg transition-colors shrink-0"
+              title="সার্চ থেকে ফিরে যান"
+            >
+              <ChevronLeft className="w-6 h-6 text-slate-800 stroke-[2.5]" />
+            </button>
 
-        {/* Center Search Input Box */}
-        <div className="flex-1 flex items-center border-[1.8px] border-[#f85606] bg-[#f9f9f9] rounded-xl px-2.5 py-1.5 shadow-xs">
-          <input
-            type="text"
-            readOnly
-            value="Search in Daraz"
-            className="w-full text-xs font-semibold text-slate-450 bg-transparent focus:outline-none pr-1 select-none pointer-events-none"
-          />
-          <Camera className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" />
-        </div>
+            {/* Logo Brand Frame */}
+            <div className="flex items-center gap-1.5 cursor-pointer selection:bg-transparent" onClick={onClose}>
+              <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-sm">
+                Z
+              </div>
+              <div className="flex flex-col">
+                <span className="font-display font-extrabold text-sm tracking-normal text-slate-950 leading-none">
+                  ZSHOP<span className="text-amber-500 font-semibold text-xs ml-0.5">BD</span>
+                </span>
+                <span className="text-[7px] tracking-[0.15em] uppercase text-gray-400 font-mono mt-0.5 font-bold">
+                  Retail Revolution
+                </span>
+              </div>
+            </div>
+          </div>
 
-        {/* Right Icons: Share, Cart with red badging, Menu Dots with badging */}
-        <div className="flex items-center gap-2 text-slate-700 shrink-0">
-          <button onClick={handleCopyLink} className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full relative" title="লিংক কপি করুন">
-            <Share2 className="w-5 h-5 stroke-[2.2]" />
-            {copiedLink && (
-              <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap">
-                Copied!
-              </span>
-            )}
-          </button>
-
-          {/* Cart Icon */}
-          <div className="relative">
+          {/* User Profile and Cart indicator */}
+          <div className="flex items-center gap-3">
             <button 
               onClick={() => {
                 onClose();
-                // trigger open cart on home viewport
-                document.getElementById("navbar-floating-cart-anchor")?.click();
-              }} 
-              className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full"
+                // trigger profile route click
+                const anchor = document.getElementById("header-profile-trigger");
+                if (anchor) anchor.click();
+              }}
+              className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-700 transition"
             >
-              <ShoppingCart className="w-5 h-5 stroke-[2.2]" />
+              <User className="w-5 h-5 stroke-[2]" />
             </button>
-            {cartCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
-                {cartCount}
-              </span>
-            )}
-          </div>
 
-          <div className="relative">
-            <button className="p-1.5 focus:outline-none hover:bg-slate-150 rounded-full">
-              <MoreHorizontal className="w-5 h-5 stroke-[2.2]" />
-            </button>
-            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
-              16
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Photo Gallery Cover */}
-      <div className="relative aspect-square w-full bg-white overflow-hidden select-none">
-        <div 
-          id="product-detail-swipe-container"
-          className="w-full h-full overflow-x-auto flex snap-x snap-mandatory scroll-smooth scrollbar-none"
-          onScroll={(e) => {
-            const el = e.currentTarget;
-            if (el.clientWidth > 0) {
-              const scrollPos = el.scrollLeft;
-              const idx = Math.round(scrollPos / el.clientWidth);
-              setActiveIndex(idx);
-              const targetThumb = alternativeThumbnails[idx];
-              if (targetThumb && targetThumb.id !== activeThumbId) {
-                setActiveThumbId(targetThumb.id);
-              }
-            }
-          }}
-        >
-          {alternativeThumbnails.map((thumb) => (
-            <div key={thumb.id} className="w-full h-full shrink-0 snap-center snap-always relative">
-              <img
-                src={thumb.image}
-                alt={`${product.title} - ${thumb.label}`}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-center"
-              />
+            {/* Cart Icon with red badge */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  onClose();
+                  // trigger open cart on home viewport
+                  const flCart = document.getElementById("navbar-floating-cart-anchor");
+                  if (flCart) {
+                    flCart.click();
+                  } else {
+                    const hCart = document.getElementById("header-cart-trigger");
+                    if (hCart) hCart.click();
+                  }
+                }} 
+                className="p-1.5 hover:bg-slate-100 rounded-full text-slate-700"
+              >
+                <ShoppingCart className="w-5 h-5 stroke-[2]" />
+              </button>
+              {cartCount > 0 ? (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
+                  {cartCount}
+                </span>
+              ) : (
+                <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black w-4.5 h-4.5 flex items-center justify-center rounded-full border border-white leading-none shadow-xs">
+                  3
+                </span>
+              )}
             </div>
-          ))}
+          </div>
         </div>
 
-        {/* Video / Photos Selector Badge */}
-        <div className="absolute top-3.5 right-3.5 flex items-center bg-slate-900/40 backdrop-blur-md rounded-full overflow-hidden p-[2px] border border-white/10 text-[10px] font-extrabold shadow-sm">
-          <span className="px-2.5 py-1 text-white/70 hover:text-white flex items-center gap-0.5 cursor-pointer">
-            <Play className="w-2.5 h-2.5 fill-current" /> Video
-          </span>
-          <span className="px-3.5 py-1 bg-white text-[#212121] rounded-full shadow-xs">
-            Photos
-          </span>
+        {/* Row 2: Search Input area */}
+        <div className="flex items-center border border-gray-250 bg-white rounded-xl px-3 py-1 bg-[#fff] justify-between shadow-xs">
+          <div className="flex items-center gap-2 flex-1">
+            <span className="text-gray-400">🔍</span>
+            <input
+              type="text"
+              readOnly
+              value={product.category === "watches" ? "Search matching clothes, watches" : "Search in ZSHOP BD"}
+              className="w-full text-xs font-medium text-slate-400 bg-transparent focus:outline-none pr-1 select-none pointer-events-none"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Camera className="w-4 h-4 text-slate-400 shrink-0 cursor-pointer" />
+            <button className="bg-[#0b1120] hover:bg-slate-800 text-white p-2 px-3 rounded-lg text-xs font-bold transition">
+              <Search className="w-3.5 h-3.5 stroke-[2.5]" />
+            </button>
+          </div>
         </div>
 
-        {/* Count Indicator */}
-        <div className="absolute bottom-3.5 right-3.5 bg-black/40 text-white text-[10px] font-bold tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1">
-          <span>📹</span> {activeIndex + 1}/{alternativeThumbnails.length}
-        </div>
-
-        {/* Campaign Left Voucher Stamp */}
-        {product.discountTag && (
-          <span className="absolute top-3.5 left-3.5 bg-[#f85606] text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded-xs shadow-xs uppercase tracking-wider">
-            {product.discountTag}
-          </span>
-        )}
       </div>
 
-      {/* 3. Small thumbnails rows indicator */}
-      <div className="bg-white px-3 py-2 flex gap-1.5 overflow-x-auto border-b border-gray-100 scrollbar-none">
-        {alternativeThumbnails.map((thumb, idx) => (
-          <button
-            key={thumb.id}
-            onClick={() => {
-              setActiveThumbId(thumb.id);
-              const container = document.getElementById("product-detail-swipe-container");
-              if (container) {
-                container.scrollTo({
-                  left: idx * container.clientWidth,
-                  behavior: "smooth"
-                });
-              }
-            }}
-            className={`w-11 h-11 shrink-0 rounded-lg overflow-hidden border transition-all ${activeThumbId === thumb.id ? "border-[#f85606]" : "border-gray-200"}`}
-          >
-            <img src={thumb.image} alt={thumb.label} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${thumb.styleClass}`} />
-          </button>
-        ))}
-      </div>
-
-      {/* 4. Pricing, Campaign Label and Voucher Saves Bar */}
-      <div className="bg-white px-3.5 py-3 border-b border-gray-100 space-y-1.5 text-left">
-        {/* Campaign ticket indicator */}
-        <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#f85606] leading-none">
-          <span className="bg-[#feeeeb] text-[#f85606] px-1 py-0.5 rounded-xs border border-[#ffe0d9] text-[9px] font-black uppercase tracking-wider leading-none">
-            Voucher Max
-          </span>
-          <span className="text-[12px] font-bold leading-none">Voucher Saves ৳ 26 🎫</span>
-        </div>
-
-        {/* Price output matches picture */}
-        <div className="flex items-baseline gap-2 pt-0.5 leading-none">
-          <span className="text-[26px] font-black text-[#f85606] leading-none font-display">
-            ৳{formatBDT(product.price)}
-          </span>
-          {product.originalPrice && product.originalPrice > product.price && (
-            <>
-              <span className="text-xs text-slate-400 line-through leading-none font-medium">
-                ৳{formatBDT(product.originalPrice)}
-              </span>
-              <span className="text-[10px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-1 py-0.2 rounded-xs leading-none">
-                -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* 5. Product Title Head with Action Icons */}
-      <div className="bg-white px-3.5 pb-3 border-b border-gray-100 text-left relative space-y-2">
-        <h1 className="text-xs font-semibold text-slate-900 leading-relaxed pr-8 line-clamp-2 md:line-clamp-none font-sans">
-          {product.title}
-        </h1>
-
-        <button 
-          onClick={toggleWishlist}
-          className="absolute right-3 top-[-4px] p-1.5 text-gray-400 hover:text-red-500 transition-colors focus:outline-none"
-        >
-          <Heart className={`w-5 h-5 ${isWishlisted ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
-        </button>
-
-        {/* Ratings and sold volume count */}
-        <div className="flex items-center gap-1.5 text-[11px] text-[#222] font-semibold pt-0.5">
-          <span className="text-amber-500 text-[12px]">★</span>
-          <span className="font-extrabold text-slate-800">{roundedHeadingRating.toFixed(1)}</span>
-          <span className="text-gray-400 font-medium">({totalReviewsCount})</span>
-          <span className="text-gray-300">|</span>
-          <span className="text-gray-500 font-medium">{getProductSoldCount(product.id)} sold</span>
-        </div>
-      </div>
-
-      {/* 6. High Fidelity Returns and Standard Localized Delivery blocks */}
-      <div className="bg-white mt-2 border-t border-b border-gray-150 p-3.5 space-y-4 text-left">
+      {/* Main product block */}
+      <div className="max-w-6xl mx-auto w-full px-4 pt-4 pb-12 flex-1">
         
-        {/* Row 1: Return guarantee */}
-        <div className="flex items-start justify-between cursor-pointer group">
-          <div className="flex items-start gap-2 text-xs text-slate-800">
-            <span className="text-green-600 font-bold block mt-0.5 text-xs">🛡️</span>
-            <div>
-              <p className="font-bold">14 days easy return</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">১০০% অথেন্টিসিটি এবং ৭ দিনের সহজ রিপ্লেসমেন্ট পলিসি</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 self-center" />
+        {/* Breadcrumb section matches picture */}
+        <div className="text-[11px] sm:text-xs text-gray-500 font-sans mb-4 flex items-center flex-wrap gap-1 bg-white p-2.5 px-4 rounded-xl border border-gray-100 shadow-3xs">
+          <span className="hover:text-[#f85606] cursor-pointer" onClick={onClose}>Home</span>
+          <span className="text-gray-300 font-bold">&gt;</span>
+          <span className="hover:text-[#f85606] cursor-pointer capitalize">
+            {product.category === "watches" ? "Wathes" : product.category}
+          </span>
+          <span className="text-gray-300 font-bold">&gt;</span>
+          <span className="hover:text-[#f85606] cursor-pointer">
+            {product.category === "watches" ? "Men's Watch" : "New Fashion"}
+          </span>
+          <span className="text-gray-300 font-bold">&gt;</span>
+          <span className="text-slate-800 truncate max-w-[200px] font-medium">{product.title}</span>
         </div>
 
-        {/* Divider */}
-        <div className="border-t border-gray-100" />
+        {/* Dynamic Screen Layout Details */}
+        <div className="bg-white border border-gray-100 rounded-2xl md:p-8 p-4 shadow-sm grid grid-cols-1 md:grid-cols-12 gap-8 text-left">
+          
+          {/* Left Column: Image with coupon sticker & snapshots */}
+          <div className="md:col-span-5 flex flex-col gap-4">
+            
+            {/* Primary Gallery viewport */}
+            <div className="relative aspect-square w-full rounded-xl bg-slate-50 border border-gray-100 overflow-hidden select-none shadow-3xs group">
+              <img
+                src={activeImage}
+                alt={product.title}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300"
+              />
 
-        {/* Row 2: Standard Delivery details */}
-        <div className="flex items-start justify-between cursor-pointer group">
-          <div className="flex items-start gap-2 text-xs text-slate-800">
-            <span className="text-indigo-600 block mt-0.5 text-xs">🚚</span>
-            <div className="space-y-1">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <p className="font-bold">Guaranteed by {getDeliveryDateEstimate()}</p>
-                <span className="bg-orange-50 border border-orange-200 text-[#f85606] text-[8px] font-black px-1 rounded-sm uppercase tracking-wide">
-                  With Voucher ৳ 120
+              {/* Red Discount Badges Badge exact in top left corner */}
+              <span className="absolute top-3 left-3 bg-rose-600 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-sm shadow-md tracking-wider">
+                -{product.originalPrice && product.originalPrice > product.price 
+                  ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) 
+                  : 35}%
+              </span>
+            </div>
+
+            {/* Thumbnail Gallery snapshots selector bar matches the mockup styles */}
+            <div className="flex gap-2.5 overflow-x-auto py-1 scrollbar-none justify-start">
+              {alternativeThumbnails.map((thumb) => (
+                <button
+                  key={thumb.id}
+                  onClick={() => {
+                    setActiveThumbId(thumb.id);
+                    setActiveImage(thumb.image);
+                  }}
+                  className={`w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 ${activeThumbId === thumb.id ? "border-[#fdb900] shadow-sm scale-102" : "border-gray-200 hover:border-gray-300"}`}
+                >
+                  <img src={thumb.image} alt={thumb.label} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${thumb.styleClass}`} />
+                </button>
+              ))}
+            </div>
+
+            {/* Viewers countdown card panel */}
+            <div className="bg-[#fafafa] border border-gray-150 p-4 rounded-xl flex items-center justify-center gap-2 shadow-3xs">
+              <span className="text-lg">👁</span>
+              <p className="text-xs text-gray-600 font-sans font-medium">
+                <strong className="text-slate-900 font-extrabold">1,248 people</strong> are viewing this product
+              </p>
+            </div>
+
+          </div>
+
+          {/* Right Column: Key Details, Price, Spec Bullet values */}
+          <div className="md:col-span-7 flex flex-col justify-start">
+            
+            {/* 100% Genuine line banner */}
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-[#1d4ed8] bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full shadow-3xs">
+                <span className="text-blue-600">✔</span>
+                <span>100% Genuine</span>
+              </div>
+
+              {/* Heart Wishlist Trigger */}
+              <button 
+                onClick={toggleWishlist}
+                className="p-2 bg-slate-50 border border-gray-100 hover:bg-slate-100 text-gray-400 hover:text-red-500 transition-colors rounded-full focus:outline-none"
+              >
+                <Heart className={`w-4 h-4 ${isWishlisted ? "fill-red-500 text-red-500" : "text-slate-400"}`} />
+              </button>
+            </div>
+
+            {/* Product Title */}
+            <h1 className="text-lg md:text-xl font-bold text-[#0f172a] leading-tight font-sans tracking-tight mb-3">
+              {product.title}
+            </h1>
+
+            {/* Price Row section */}
+            <div className="flex items-baseline gap-2.5 mb-5 bg-[#fafafa] p-4 rounded-xl border border-gray-100">
+              <span className="text-2xl md:text-3xl font-black text-[#0f172a] font-sans">
+                ৳{formatBDT(product.price)}
+              </span>
+              {product.originalPrice && (
+                <>
+                  <span className="text-sm md:text-base text-gray-400 line-through font-medium">
+                    ৳{formatBDT(product.originalPrice)}
+                  </span>
+                  <span className="text-[10px] md:text-xs font-extrabold text-rose-600 bg-rose-50 border border-rose-100 px-1.5 py-0.5 rounded">
+                    -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Brand/Model Specs Directory details table */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-600 mb-6 border-b border-gray-100 pb-5">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-400">Brand:</span>
+                <span className="text-[#1d4ed8] hover:underline font-semibold cursor-pointer">
+                  {product.category === "watches" ? "Emporio Armani" : "ZSHOP Premium"}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-700">Standard Delivery</p>
-              
-              {/* Specialized localized Address selection inside Chittagong */}
-              <div className="flex items-center gap-1 text-[10px] text-[#f85606] font-bold bg-[#fffdf0] border border-[#ffebaa] rounded px-1.5 py-0.5 mt-1.5 self-start">
-                <MapPin className="w-3 h-3 text-[#f85606]" />
-                <span>To Bayezid Bostami (চট্টগ্রাম) • ৳{deliveryCostForDistrict} কুরিয়ার চার্জ</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-400">Model:</span>
+                <span className="font-semibold text-slate-900">{product.id === "wt-armani" ? "AR2448" : `Z-${product.id.toUpperCase()}`}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-400">Condition:</span>
+                <span className="font-semibold text-slate-900">Brand New</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-400">Warranty:</span>
+                <span className="font-semibold text-slate-900">{product.category === "watches" ? "2 Years International Warranty" : "1 Year Brand Warranty"}</span>
+              </div>
+              <div className="flex items-center gap-2 col-span-2">
+                <span className="font-bold text-slate-400">Stock:</span>
+                <span className="font-extrabold text-emerald-600">● In Stock</span>
               </div>
             </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 self-center" />
-        </div>
-      </div>
 
-      {/* 7. Vouchers Row Section */}
-      <div className="bg-white mt-1.5 border-t border-b border-gray-150 p-3 flex items-center justify-between text-left cursor-pointer">
-        <div className="flex items-center gap-3.5">
-          <span className="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest text-[9px]">Vouchers</span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="border border-dashed border-red-300 text-[#f85606] bg-red-50 text-[10px] font-extrabold px-1.5 py-0.5 rounded-sm">
-              ৳40 Off
-            </span>
-            <span className="bg-[#e6f9f6] text-[#00b4a0] text-[9px] font-black px-1.5 py-0.5 rounded-xs border border-[#bcefed] uppercase">
-              Free Shipping T&C
-            </span>
-          </div>
-        </div>
-        <ChevronRight className="w-4 h-4 text-gray-400" />
-      </div>
-
-      {/* 8. Specifications Selectors (Colors & Sizes) */}
-      <div className="bg-white mt-1.5 border-t border-b border-gray-150 p-3.5 space-y-4 text-left">
-        <h3 className="text-xs font-bold text-slate-900 border-l-[3px] border-[#f85606] pl-2 uppercase tracking-wide">
-          বাছাই করুন (Specifications)
-        </h3>
-
-        {/* Color specification rows */}
-        {product.colors && product.colors.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">কালার/ভ্যারিয়েন্ট:</span>
-            <div className="flex flex-wrap gap-2">
-              {product.colors.map((col) => (
-                <button
-                  key={col}
-                  onClick={() => setSelectedColor(col)}
-                  className={`px-3 py-1 bg-slate-50 border rounded-lg text-xs font-semibold cursor-pointer transition-all ${selectedColor === col ? "border-[#f85606] text-[#f85606] bg-[#feeeeb] font-extrabold" : "border-gray-200 text-slate-700 hover:border-gray-450"}`}
-                >
-                  {col}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Sizes specification rows */}
-        {product.sizes && product.sizes.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">সাইজ কোড:</span>
-            <div className="flex flex-wrap gap-2">
-              {product.sizes.map((sz) => (
-                <button
-                  key={sz}
-                  onClick={() => setSelectedSize(sz)}
-                  className={`min-w-8 h-8 px-2 flex items-center justify-center border rounded-lg text-xs font-mono font-bold cursor-pointer transition-all ${selectedSize === sz ? "border-[#f85606] text-[#f85606] bg-[#feeeeb]" : "border-gray-200 text-slate-700 hover:border-gray-450"}`}
-                >
-                  {sz}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Quantity selector row */}
-        <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-          <span className="text-[11px] font-bold text-slate-650">অর্ডারের পরিমাণ (Quantity):</span>
-          <div className="flex items-center border border-gray-250 rounded-xl bg-slate-50 overflow-hidden h-9">
-            <button
-              onClick={() => { if (quantity > 1) setQuantity(quantity - 1); }}
-              className="px-3.5 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none"
-            >
-              -
-            </button>
-            <span className="w-7 text-center text-xs font-bold text-slate-900">{quantity}</span>
-            <button
-              onClick={() => setQuantity(quantity + 1)}
-              className="px-3.5 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none"
-            >
-              +
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 9. Collapsible Switch Tabs: Description, Specs, Q&A and Reviews */}
-      <div className="bg-white mt-1.5 border-t border-b border-gray-150 text-left">
-        <div className="flex border-b border-gray-150 bg-slate-50 overflow-x-auto scrollbar-none">
-          <button
-            onClick={() => setActiveTab("detail")}
-            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "detail" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
-          >
-            📊 Description
-          </button>
-          <button
-            onClick={() => setActiveTab("specs")}
-            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "specs" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
-          >
-            ⚙️ Specifications
-          </button>
-          <button
-            onClick={() => setActiveTab("qa")}
-            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "qa" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
-          >
-            💬 Q&A ({questions.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("reviews")}
-            className={`py-2.5 px-4 text-xs font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "reviews" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-slate-800"}`}
-          >
-            ⭐ Reviews ({reviews.length})
-          </button>
-        </div>
-
-        <div className="p-4">
-          {/* TAB 1: DESCRIPTION */}
-          {activeTab === "detail" && (
-            <div className="space-y-4 text-xs sm:text-sm leading-relaxed text-slate-700 font-sans">
-              <div className="p-3 bg-red-50/40 border border-red-100 rounded-xl text-slate-800 flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-[#f85606] shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-extrabold text-[#f85606] text-[11px] uppercase tracking-wide">ZSHOP BD MALL SELLER GUARANTEE</p>
-                  <p className="mt-0.5 text-xs text-slate-600">১০০% অথেন্টিসিটি এবং ৩ দিনে চট্টগ্রামের যেকোনো স্থানে দ্রুত হোম ডেলিভারি!</p>
-                </div>
-              </div>
-              <p className="whitespace-pre-line text-[#333] font-sans leading-relaxed">{product.description}</p>
-            </div>
-          )}
-
-          {/* TAB 2: SPECIFICATIONS */}
-          {activeTab === "specs" && (
-            <div className="space-y-1">
-              {specifications.map((spec, idx) => (
-                <div key={idx} className="flex border-b border-gray-100 py-2.5 text-xs">
-                  <span className="w-1/3 text-gray-400 font-semibold">{spec.label}</span>
-                  <span className="w-2/3 text-slate-800 font-bold">{spec.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* TAB 3: Q&A */}
-          {activeTab === "qa" && (
-            <div className="space-y-4">
-              <form onSubmit={handleAskQuestion} className="bg-slate-50 p-3 border border-gray-200 rounded-xl space-y-2">
-                <p className="text-[11px] font-bold text-slate-700">জিজ্ঞেস করুনঃ</p>
-                {qaSuccessMessage && (
-                  <p className="bg-green-50 text-green-800 p-2 rounded text-[11px] font-semibold">{qaSuccessMessage}</p>
-                )}
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={newQuestionText}
-                    onChange={(e) => setNewQuestionText(e.target.value)}
-                    placeholder="পণ্যটি সম্পর্কে আপনার যেকোনো প্রশ্ন লিখুন..."
-                    className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none text-xs"
-                  />
-                  <button type="submit" className="bg-[#f85606] text-white p-2 rounded-lg cursor-pointer">
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
-
-              <div className="space-y-3 pt-2">
-                {questions.map((q) => (
-                  <div key={q.id} className="p-3 bg-white border border-gray-150 rounded-xl text-xs space-y-2">
-                    <div className="flex gap-2 items-start">
-                      <span className="bg-orange-100 text-orange-700 px-1 font-mono text-[9px] font-bold rounded">Q</span>
-                      <div>
-                        <p className="font-bold text-slate-800">{q.query}</p>
-                        <p className="text-[9px] text-[#999]">{q.senderName} ({q.date})</p>
-                      </div>
-                    </div>
-                    {q.reply && (
-                      <div className="p-2.5 bg-slate-50 border border-gray-100 rounded-lg ml-4 space-y-0.5">
-                        <p className="text-[9px] font-bold text-[#f85606] uppercase tracking-wide">ZShop Support Reply:</p>
-                        <p className="text-slate-600">{q.reply}</p>
-                      </div>
-                    )}
+            {/* Core Feature bullet outline specs list with dynamic icons */}
+            <div className="space-y-3 mb-8 bg-amber-50/20 border border-amber-100 p-4 rounded-xl text-xs sm:text-sm text-slate-700">
+              <h3 className="font-bold text-slate-900 mb-2 font-sans text-xs uppercase tracking-wider text-amber-800">Product Highlights:</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {getCategorySpecs(product.category).map((spec, index) => (
+                  <div key={index} className="flex items-center gap-2 text-slate-810">
+                    <span className="text-slate-800 font-bold bg-[#fafafa] w-6 h-6 flex items-center justify-center rounded border border-gray-150 shrink-0">
+                      {spec.icon}
+                    </span>
+                    <span className="font-medium">{spec.text}</span>
                   </div>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* TAB 4: REVIEWS */}
-          {activeTab === "reviews" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
-                <span className="text-xs font-bold text-slate-800">ক্রেতাদের বাস্তব রিভিউসমূহ</span>
+            {/* Call Action Control boxes */}
+            <div className="bg-[#fcfdff] p-5 rounded-xl border border-blue-50/50 space-y-5">
+              
+              {/* Quantity selector */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-550 uppercase tracking-wider">Purchase Quantity:</span>
+                <div className="flex items-center border border-gray-300 rounded-lg bg-white overflow-hidden h-9">
+                  <button
+                    onClick={() => { if (quantity > 1) setQuantity(quantity - 1); }}
+                    className="px-3 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none hover:bg-slate-50 transition"
+                  >
+                    -
+                  </button>
+                  <span className="w-8 text-center text-xs font-bold text-slate-900">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="px-3 text-gray-500 hover:text-slate-900 font-bold h-full focus:outline-none hover:bg-slate-50 transition"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic cart and order CTA buttons exact as in screenshot draft */}
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
-                  type="button"
-                  onClick={() => setShowReviewForm(!showReviewForm)}
-                  className="bg-slate-900 hover:bg-[#f85606] text-white font-bold text-[10px] px-2.5 py-1 rounded-lg"
+                  onClick={handleAddToCart}
+                  className="flex-1 h-12 bg-[#0b1120] hover:bg-slate-800 active:scale-98 text-white rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md focus:outline-none"
                 >
-                  리뷰 লিখতে চান?
+                  <ShoppingCart className="w-4 h-4 text-white" />
+                  <span>ADD TO CART</span>
+                </button>
+
+                <button
+                  onClick={handleBuyNowTrigger}
+                  className="flex-1 h-12 bg-white border-2 border-[#0b1120] hover:bg-slate-50 active:scale-98 text-[#0b1120] rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-1.5 cursor-pointer transition-all focus:outline-none"
+                >
+                  <span>⚡ BUY NOW</span>
                 </button>
               </div>
 
-              {reviewMessage && (
-                <p className="p-2 bg-green-50 text-green-800 rounded font-semibold text-xs">{reviewMessage}</p>
-              )}
+              {/* Sub secure cash delivery notification */}
+              <div className="pt-2 flex items-center justify-center gap-1.5 text-xs text-emerald-600 font-black tracking-wide uppercase font-sans">
+                <span>💵</span>
+                <span>CASH ON DELIVERY AVAILABLE</span>
+              </div>
 
-              {showReviewForm && (
-                <form onSubmit={handleSubmitReview} className="bg-slate-50 p-3 border border-gray-200 rounded-xl space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* RELATED PRODUCTS (CAROUSEL WITH ARROWS) */}
+        <div className="p-5 text-left bg-white mt-6 border border-gray-100 rounded-2xl shadow-xs relative">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+            <span className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+              🔍 Related Products
+            </span>
+            <button 
+              onClick={() => {
+                onClose();
+                // trigger Categories tab selection in parents
+                const btns = document.getElementsByTagName("button");
+                for (let i = 0; i < btns.length; i++) {
+                  if (btns[i].innerText && btns[i].innerText.includes("Watches")) {
+                    btns[i].click();
+                    break;
+                  }
+                }
+              }} 
+              className="text-xs font-bold text-gray-400 hover:text-[#f85606] flex items-center gap-1 transition"
+            >
+              <span>View All</span>
+              <span>➔</span>
+            </button>
+          </div>
+
+          {/* Carousel Slider with chevrons */}
+          <div className="relative group px-1">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" id="related-carousel-flow">
+              {(relatedProducts.length > 0 ? relatedProducts : PRODUCTS.filter(p => p.category === "watches" && p.id !== product.id)).slice(0, 4).map((relProduct) => {
+                const discPercent = relProduct.originalPrice ? Math.round(((relProduct.originalPrice - relProduct.price) / relProduct.originalPrice) * 100) : 30;
+                return (
+                  <div
+                    key={relProduct.id}
+                    onClick={() => {
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                      if (onSelectProduct) onSelectProduct(relProduct);
+                    }}
+                    className="bg-white border border-gray-100 p-3 rounded-xl cursor-pointer hover:shadow-lg transition-all duration-300 flex flex-col justify-between shrink-0"
+                  >
+                    <div className="aspect-square rounded-lg overflow-hidden relative bg-slate-50 mb-3 group-relative">
+                      <img src={relProduct.image} alt={relProduct.title} referrerPolicy="no-referrer" className="w-full h-full object-cover group-hover:scale-102 transition" />
+                      
+                      {/* Top Left red stamp banner */}
+                      <span className="absolute top-1.5 left-1.5 bg-rose-600 text-white font-extrabold text-[8px] px-1 py-0.5 rounded-sm tracking-wider shadow-xs">
+                        -{discPercent}%
+                      </span>
+                    </div>
+                    
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">নামঃ</label>
-                      <input
-                        type="text"
+                      <h4 className="text-[12px] font-bold text-slate-800 line-clamp-1 leading-tight hover:text-[#f85606] transition">{relProduct.title}</h4>
+                      <p className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wider font-mono">Men's Watch</p>
+                      
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        <span className="text-[#0f172a] font-black text-xs">৳{formatBDT(relProduct.price)}</span>
+                        {relProduct.originalPrice && (
+                          <span className="line-through text-[9px] text-gray-400">৳{formatBDT(relProduct.originalPrice)}</span>
+                        )}
+                      </div>
+
+                      <div className="text-[9px] text-emerald-600 font-bold tracking-wider uppercase mt-1">
+                        In Stock
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Navigation Overlay arrows */}
+            <button className="absolute left-[-12px] top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-slate-700 hover:bg-slate-50 focus:outline-none transition active:scale-95">
+              <span>‹</span>
+            </button>
+            <button className="absolute right-[-12px] top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white shadow-md border border-gray-100 flex items-center justify-center text-slate-700 hover:bg-slate-50 focus:outline-none transition active:scale-95">
+              <span>›</span>
+            </button>
+          </div>
+        </div>
+
+        {/* MERCHANT VERIFIED SELLER PROFILE matches picture exactly */}
+        <div className="p-5 text-left bg-white mt-6 border border-gray-100 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+            <span className="text-sm font-black text-slate-900 uppercase tracking-wider font-sans">
+              🏠 Merchant Profile
+            </span>
+            <button className="text-xs font-bold text-gray-400 hover:text-[#f85606] flex items-center gap-1 transition">
+              <span>View Shop</span>
+              <span>➔</span>
+            </button>
+          </div>
+
+          {/* Profile overview card content */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-5 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-sm select-none shadow-sm">
+                ZSHOP
+              </div>
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-slate-900 text-[15px]">ZSHOP BD</span>
+                  <span className="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
+                </div>
+                <span className="text-[10px] text-gray-400 leading-tight">Verified Merchant</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium bg-[#fafafa] border border-gray-100 px-2 py-0.5 rounded-full inline-block">Digital & Fashion Retailer</span>
+              </div>
+            </div>
+
+            {/* Chat connection widget */}
+            <button 
+              onClick={() => alert("কানেক্টিং উইথ কাস্টমার রিলেশন হাব...")}
+              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-transform active:scale-95 focus:outline-none flex items-center gap-1.5 shadow-sm shrink-0"
+            >
+              <span>💬</span>
+              <span>Chat with Shop</span>
+            </button>
+          </div>
+
+          {/* Stats overview bento directory */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-center">
+            <div className="bg-[#f8fafc] border border-gray-100 p-3 rounded-xl">
+              <p className="text-base sm:text-lg font-black text-[#0f172a]">4.8 ★</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Rating</p>
+            </div>
+            <div className="bg-[#f8fafc] border border-gray-100 p-3 rounded-xl">
+              <p className="text-base sm:text-lg font-black text-[#0f172a]">1.2M+</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Happy Customers</p>
+            </div>
+            <div className="bg-[#f8fafc] border border-gray-100 p-3 rounded-xl">
+              <p className="text-base sm:text-lg font-black text-[#0f172a]">98%</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Positive Review</p>
+            </div>
+            <div className="bg-[#f8fafc] border border-gray-100 p-3 rounded-xl">
+              <p className="text-base sm:text-lg font-black text-[#0f172a]">2+ Years</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">On ZSHOP BD</p>
+            </div>
+          </div>
+
+          {/* Trust assurances bars */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-gray-50 text-wrap">
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-550 font-bold justify-center">
+              <span>🛡️</span>
+              <span>100% Authentic</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-550 font-bold justify-center">
+              <span>⟲</span>
+              <span>7 Days Return</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-550 font-bold justify-center">
+              <span>💵</span>
+              <span>Cash on Delivery</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-[10px] sm:text-xs text-slate-550 font-bold justify-center">
+              <span>🚚</span>
+              <span>Fast Delivery</span>
+            </div>
+          </div>
+        </div>
+
+        {/* TAB GROUPS: DESCRIPTION, SPECIFICATIONS, Q&A AND REVIEWS */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-xs mt-6 overflow-hidden text-left">
+          <div className="flex border-b border-gray-100 bg-[#f8fafc] overflow-x-auto scrollbar-none">
+            <button
+              onClick={() => setActiveTab("detail")}
+              className={`py-3.5 px-6 text-xs sm:text-sm font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "detail" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-500 hover:text-[#f85606]"}`}
+            >
+              📊 Description
+            </button>
+            <button
+              onClick={() => setActiveTab("specs")}
+              className={`py-3.5 px-6 text-xs sm:text-sm font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "specs" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-[#f85606]"}`}
+            >
+              ⚙️ Specifications
+            </button>
+            <button
+              onClick={() => setActiveTab("qa")}
+              className={`py-3.5 px-6 text-xs sm:text-sm font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "qa" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-[#f85606]"}`}
+            >
+              💬 Q&A ({questions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("reviews")}
+              className={`py-3.5 px-6 text-xs sm:text-sm font-bold transition-all whitespace-nowrap focus:outline-none ${activeTab === "reviews" ? "bg-white text-[#f85606] border-b-2 border-[#f85606]" : "text-gray-550 hover:text-[#f85606]"}`}
+            >
+              ⭐ Reviews ({reviews.length})
+            </button>
+          </div>
+
+          <div className="p-6">
+            {/* TAB 1: DESCRIPTION */}
+            {activeTab === "detail" && (
+              <div className="space-y-4 text-xs sm:text-sm leading-relaxed text-slate-700 font-sans">
+                <div className="p-3.5 bg-red-50/40 border border-red-100 rounded-xl text-slate-800 flex items-start gap-2.5">
+                  <span className="text-[#f85606] font-bold block mt-0.5">🛡️</span>
+                  <div>
+                    <p className="font-extrabold text-[#f85606] text-[11px] uppercase tracking-wide">ZSHOP BD MALL SELLER GUARANTEE</p>
+                    <p className="mt-0.5 text-xs text-slate-600">১০০% অথেন্টিসিটি এবং ৩ দিনে চট্টগ্রামের যেকোনো স্থানে দ্রুত হোম ডেলিভারি!</p>
+                  </div>
+                </div>
+                <p className="whitespace-pre-line text-[#333] font-sans leading-relaxed">{product.description}</p>
+              </div>
+            )}
+
+            {/* TAB 2: SPECIFICATIONS */}
+            {activeTab === "specs" && (
+              <div className="space-y-1">
+                {specifications.map((spec, idx) => (
+                  <div key={idx} className="flex border-b border-gray-100 py-3 text-xs sm:text-sm">
+                    <span className="w-1/3 text-gray-400 font-semibold">{spec.label}</span>
+                    <span className="w-2/3 text-slate-800 font-bold">{spec.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* TAB 3: Q&A */}
+            {activeTab === "qa" && (
+              <div className="space-y-4">
+                <form onSubmit={handleAskQuestion} className="bg-slate-50 p-4 border border-gray-200 rounded-xl space-y-2.5">
+                  <p className="text-[11px] font-bold text-slate-700">জিজ্ঞেস করুনঃ</p>
+                  {qaSuccessMessage && (
+                    <p className="bg-green-50 text-green-800 p-2 rounded text-[11px] font-semibold">{qaSuccessMessage}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required
+                      value={newQuestionText}
+                      onChange={(e) => setNewQuestionText(e.target.value)}
+                      placeholder="পণ্যটি সম্পর্কে আপনার যেকোনো প্রশ্ন লিখুন..."
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-2.5 py-2.5 outline-none text-xs sm:text-sm"
+                    />
+                    <button type="submit" className="bg-[#0b1120] hover:bg-slate-800 text-white p-2.5 px-3 rounded-lg cursor-pointer flex items-center justify-center transition shadow-xs">
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </form>
+
+                <div className="space-y-3 pt-2">
+                  {questions.map((q) => (
+                    <div key={q.id} className="p-3.5 bg-white border border-gray-150 rounded-xl text-xs sm:text-sm space-y-2">
+                      <div className="flex gap-2 items-start">
+                        <span className="bg-orange-100 text-orange-700 px-1 font-mono text-[9px] font-bold rounded">Q</span>
+                        <div>
+                          <p className="font-bold text-slate-800">{q.query}</p>
+                          <p className="text-[9px] sm:text-[10px] text-[#999]">{q.senderName} ({q.date})</p>
+                        </div>
+                      </div>
+                      {q.reply && (
+                        <div className="p-3 bg-slate-50 border border-gray-100 rounded-lg ml-4 space-y-1">
+                          <p className="text-[9px] font-bold text-[#f85606] uppercase tracking-wide">ZShop Support Reply:</p>
+                          <p className="text-slate-650 leading-relaxed">{q.reply}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: REVIEWS */}
+            {activeTab === "reviews" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                  <span className="text-xs sm:text-sm font-bold text-slate-800">ক্রেতাদের বাস্তব রিভিউসমূহ</span>
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewForm(!showReviewForm)}
+                    className="bg-slate-900 hover:bg-[#f85606] text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                  >
+                    রিভিউ লিখতে চান?
+                  </button>
+                </div>
+
+                {reviewMessage && (
+                  <p className="p-2 bg-green-50 text-green-800 rounded font-semibold text-xs">{reviewMessage}</p>
+                )}
+
+                {showReviewForm && (
+                  <form onSubmit={handleSubmitReview} className="bg-[#f8fafc] p-4 border border-gray-200 rounded-xl space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1">নামঃ</label>
+                        <input
+                          type="text"
+                          required
+                          value={newReviewName}
+                          onChange={(e) => setNewReviewName(e.target.value)}
+                          className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs sm:text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1">তারা রেটিংঃ</label>
+                        <select
+                          value={newReviewRating}
+                          onChange={(e) => setNewReviewRating(Number(e.target.value))}
+                          className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs sm:text-sm outline-none"
+                        >
+                          <option value="5">★★★★★ (5 Stars)</option>
+                          <option value="4">★★★★☆ (4 Stars)</option>
+                          <option value="3">★★★☆☆ (3 Stars)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">মতামতঃ</label>
+                      <textarea
                         required
-                        value={newReviewName}
-                        onChange={(e) => setNewReviewName(e.target.value)}
-                        className="w-full bg-white border border-gray-250 rounded px-2 py-1 text-xs"
+                        value={newReviewComment}
+                        onChange={(e) => setNewReviewComment(e.target.value)}
+                        className="w-full bg-white border border-gray-250 rounded p-2 text-xs sm:text-sm"
+                        rows={2}
                       />
                     </div>
+
                     <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-0.5">তারা রেটিংঃ</label>
-                      <select
-                        value={newReviewRating}
-                        onChange={(e) => setNewReviewRating(Number(e.target.value))}
-                        className="w-full bg-white border border-gray-250 rounded px-2 py-1 text-xs outline-none"
-                      >
-                        <option value="5">★★★★★ (5 Stars)</option>
-                        <option value="4">★★★★☆ (4 Stars)</option>
-                        <option value="3">★★★☆☆ (3 Stars)</option>
-                      </select>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">ছবি সংযুক্ত করুন (ঐচ্ছিক):</label>
+                      <input type="file" accept="image/*" onChange={handleReviewPhotoUpload} className="text-xs" />
                     </div>
-                  </div>
 
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">মতামতঃ</label>
-                    <textarea
-                      required
-                      value={newReviewComment}
-                      onChange={(e) => setNewReviewComment(e.target.value)}
-                      className="w-full bg-white border border-[#ccc] rounded p-2 text-xs"
-                      rows={2}
-                    />
-                  </div>
+                    <button type="submit" className="bg-[#f85606] block w-full text-white text-xs font-bold py-2 rounded-lg transition">
+                      সাবমিট রিভিউ (Publish)
+                    </button>
+                  </form>
+                )}
 
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-500 block mb-0.5">ছবি সংযুক্ত করুন (ঐচ্ছিক):</label>
-                    <input type="file" accept="image/*" onChange={handleReviewPhotoUpload} className="text-xs" />
-                  </div>
-
-                  <button type="submit" className="bg-[#f85606] block w-full text-white text-xs font-bold py-1.5 rounded-lg">
-                    সাবমিট রিভিউ (Publish)
-                  </button>
-                </form>
-              )}
-
-              <div className="space-y-3">
-                {reviews.map((rev) => (
-                  <div key={rev.id} className="p-3 bg-white border border-gray-150 rounded-xl space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-slate-800 text-xs">{rev.name}</span>
-                      <span className="text-[9px] text-[#bbb] font-mono">{rev.date}</span>
-                    </div>
-                    <div className="flex gap-0.5 text-amber-400">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i}>{i < rev.rating ? "★" : "☆"}</span>
-                      ))}
-                    </div>
-                    <p className="text-slate-650 text-xs leading-relaxed">{rev.comment}</p>
-                    {rev.image && (
-                      <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 mt-1">
-                        <img src={rev.image} alt="User upload" className="w-full h-full object-cover" />
+                <div className="space-y-3">
+                  {reviews.map((rev) => (
+                    <div key={rev.id} className="p-3.5 bg-white border border-gray-150 rounded-xl space-y-2 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-[#0f172a] text-xs sm:text-sm">{rev.name}</span>
+                        <span className="text-[9px] text-[#bbb] font-mono">{rev.date}</span>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <div className="flex gap-0.5 text-amber-400 text-xs">
+                        {[...Array(5)].map((_, i) => (
+                          <span key={i}>{i < rev.rating ? "★" : "☆"}</span>
+                        ))}
+                      </div>
+                      <p className="text-slate-650 text-xs sm:text-sm leading-relaxed">{rev.comment}</p>
+                      {rev.image && (
+                        <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 mt-2">
+                          <img src={rev.image} alt="User upload" className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
       </div>
 
-      {/* 10. Related Carousel Block */}
-      {relatedProducts.length > 0 && (
-        <div className="p-4 space-y-3.5 text-left bg-white mt-1.5 border-t border-b border-gray-150">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-1.5">
-            <span className="text-xs font-black text-slate-900 uppercase tracking-wide flex items-center gap-1">
-              <TrendingUp className="w-3.5 h-3.5 text-[#f85606]" /> Related Products
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {relatedProducts.map((relProduct) => (
-              <div
-                key={relProduct.id}
-                onClick={() => {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                  if (onSelectProduct) onSelectProduct(relProduct);
-                }}
-                className="bg-white border border-gray-200 rounded-xl p-2 cursor-pointer hover:shadow-sm"
-              >
-                <div className="aspect-square rounded-lg overflow-hidden relative bg-slate-100 mb-1.5">
-                  <img src={relProduct.image} alt={relProduct.title} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
-                </div>
-                <h4 className="text-[11px] font-bold text-slate-800 truncate leading-tight">{relProduct.title}</h4>
-                <p className="text-[#f85606] font-extrabold text-[11px] mt-0.5">৳{formatBDT(relProduct.price)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 11. Custom Bottom Action Bar Sticky to wrapper device (Daraz Orange Theme) */}
-      <div className="fixed bottom-0 left-0 right-0 max-w-[480px] mx-auto bg-white border-t border-gray-250 py-2.5 px-3 flex items-center justify-between gap-2 shadow-2xl z-40 select-none">
-        
-        {/* Store Access Button */}
+      {/* FOOTER TAB MENU BAR matches preview screenshot layout exactly */}
+      <div className="fixed bottom-0 left-0 right-0 max-w-full bg-white border-t border-gray-200 py-3 px-4 flex items-center justify-around text-center shadow-lg z-45">
+        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-800 transition hover:text-slate-900 group">
+          <span className="text-lg text-slate-900">🏠</span>
+          <span className="text-[10px] font-semibold mt-0.5 text-[#000]">Home</span>
+        </button>
+        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group">
+          <span className="text-lg">🗂</span>
+          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Categories</span>
+        </button>
+        <button onClick={onClose} className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group">
+          <span className="text-lg animate-pulse">🔥</span>
+          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Deals</span>
+        </button>
         <button 
-          onClick={onClose} 
-          className="flex flex-col items-center justify-center text-[10px] font-bold text-gray-500 w-11 focus:outline-none"
+          onClick={() => {
+            onClose();
+            // Open user profile to review orders
+            const anchor = document.getElementById("header-profile-trigger");
+            if (anchor) anchor.click();
+          }} 
+          className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group"
         >
-          <Home className="w-[19px] h-[19px] text-gray-600 stroke-[2.2]" />
-          <span className="mt-0.5">Store</span>
+          <span className="text-lg">📦</span>
+          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Orders</span>
         </button>
-
-        {/* Chat Access Button */}
         <button 
-          onClick={() => alert("কানেক্টিং উইথ কাস্টমার রিলেশন সাপোর্ট...")} 
-          className="flex flex-col items-center justify-center text-[10px] font-bold text-gray-500 w-11 focus:outline-none"
+          onClick={() => {
+            onClose();
+            // Open user profile
+            const anchor = document.getElementById("header-profile-trigger");
+            if (anchor) anchor.click();
+          }} 
+          className="flex flex-col items-center justify-center text-gray-400 transition hover:text-slate-900 group"
         >
-          <MessageSquare className="w-[19px] h-[19px] text-gray-600 stroke-[2.2]" />
-          <span className="mt-0.5">Chat</span>
-        </button>
-
-        {/* Buy Now Yellow Button */}
-        <button
-          onClick={handleBuyNowTrigger}
-          className="flex-1 h-11 flex flex-col items-center justify-center bg-[#fdb900] hover:bg-[#e4a600] active:scale-95 text-white rounded-lg focus:outline-none transition-transform"
-        >
-          <span className="text-[11px] font-extrabold tracking-wide uppercase leading-none">Buy Now</span>
-          <span className="text-[10px] font-semibold mt-0.5 leading-none">৳{formatBDT(product.price * quantity)}</span>
-        </button>
-
-        {/* Add to Cart Orange Button */}
-        <button
-          onClick={handleAddToCart}
-          className={`flex-1 h-11 flex items-center justify-center bg-[#f85606] hover:bg-[#d64a05] active:scale-95 text-white rounded-lg font-black text-xs uppercase focus:outline-none transition-transform ${addedMessage ? "bg-green-600 hover:bg-green-600" : ""}`}
-        >
-          {addedMessage ? (
-            <span className="text-[11px]">✔ Added to Cart</span>
-          ) : (
-            <span>Add to Cart</span>
-          )}
+          <span className="text-lg">👤</span>
+          <span className="text-[10px] font-semibold mt-0.5 text-slate-500">Account</span>
         </button>
       </div>
 
