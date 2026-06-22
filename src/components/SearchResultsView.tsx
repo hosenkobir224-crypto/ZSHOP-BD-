@@ -63,7 +63,8 @@ export default function SearchResultsView({
       const matchesQuery =
         prod.title.toLowerCase().includes(query) ||
         prod.category.toLowerCase().includes(query) ||
-        prod.description.toLowerCase().includes(query);
+        prod.description.toLowerCase().includes(query) ||
+        (prod.merchantShopName && prod.merchantShopName.toLowerCase().includes(query));
 
       const matchesCategory = selectedCategory === "all" || prod.category === selectedCategory;
 

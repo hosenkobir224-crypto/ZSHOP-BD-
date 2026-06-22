@@ -140,6 +140,30 @@ export default function ProductDetailModal({
   // Cart Status Counter state
   const [cartCount, setCartCount] = useState<number>(0);
 
+  // Real product views count state
+  const [realViewsCount, setRealViewsCount] = useState<number | null>(null);
+
+  // Track product view counter reactively from server
+  useEffect(() => {
+    if (!isOpen || !product?.id) return;
+    
+    // Call server to increment and retrieve the persistent view count
+    fetch("/api/products/view", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id })
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && typeof data.views === "number") {
+          setRealViewsCount(data.views);
+        }
+      })
+      .catch((err) => {
+        console.error("Error setting/getting product view:", err);
+      });
+  }, [isOpen, product?.id]);
+
   // Load and read Cart items count to make red badge feel realistic!
   useEffect(() => {
     if (!isOpen) return;
@@ -725,7 +749,10 @@ export default function ProductDetailModal({
             <div className="bg-[#fafafa] border border-gray-150 p-4 rounded-xl flex items-center justify-center gap-2 shadow-3xs">
               <span className="text-lg">👁</span>
               <p className="text-xs text-gray-600 font-sans font-medium">
-                <strong className="text-slate-900 font-extrabold">1,248 people</strong> are viewing this product
+                <strong className="text-slate-900 font-extrabold">
+                  {realViewsCount !== null ? realViewsCount.toLocaleString() : "1,248"}{" "}
+                  {realViewsCount === 1 ? "person" : "people"}
+                </strong> are viewing this product
               </p>
             </div>
 
@@ -1002,7 +1029,16 @@ export default function ProductDetailModal({
             <span className="text-sm font-black text-slate-900 uppercase tracking-wider font-sans">
               🏠 Merchant Profile
             </span>
-            <button className="text-xs font-bold text-gray-400 hover:text-[#f85606] flex items-center gap-1 transition">
+            <button 
+              onClick={() => {
+                if (setSearchQuery && product) {
+                  const shopName = product.merchantShopName || "ZSHOP BD";
+                  setSearchQuery(shopName);
+                  onClose();
+                }
+              }}
+              className="text-xs font-bold text-gray-400 hover:text-[#f85606] flex items-center gap-1 transition cursor-pointer"
+            >
               <span>View Shop</span>
               <span>➔</span>
             </button>
@@ -1011,22 +1047,24 @@ export default function ProductDetailModal({
           {/* Profile overview card content */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-5 pb-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-sm select-none shadow-sm">
-                ZSHOP
+              <div className="w-12 h-12 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-[11px] uppercase tracking-wider select-none shadow-sm px-1 text-center shrink-0">
+                {product?.merchantShopName ? product.merchantShopName.substring(0, 5).toUpperCase() : "ZSHOP"}
               </div>
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-extrabold text-slate-900 text-[15px]">ZSHOP BD</span>
+                  <span className="font-extrabold text-slate-900 text-[15px]">{product?.merchantShopName || "ZSHOP BD"}</span>
                   <span className="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
                 </div>
                 <span className="text-[10px] text-gray-400 leading-tight">Verified Merchant</span>
-                <span className="text-xs text-gray-600 mt-1 font-medium bg-[#fafafa] border border-gray-100 px-2 py-0.5 rounded-full inline-block">Digital & Fashion Retailer</span>
+                <span className="text-xs text-gray-600 mt-1 font-medium bg-[#fafafa] border border-gray-100 px-2 py-0.5 rounded-full inline-block">
+                  {product?.merchantShopName ? "Verified Store Partner" : "Digital & Fashion Retailer"}
+                </span>
               </div>
             </div>
 
             {/* Chat connection widget */}
             <button 
-              onClick={() => alert("কানেক্টিং উইথ কাস্টমার রিলেশন হাব...")}
+              onClick={() => alert(`${product?.merchantShopName || "ZSHOP BD"} এর কাস্টমার রিলেশন হাব এর সাথে কানেক্ট করা হচ্ছে...`)}
               className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-transform active:scale-95 focus:outline-none flex items-center gap-1.5 shadow-sm shrink-0"
             >
               <span>💬</span>

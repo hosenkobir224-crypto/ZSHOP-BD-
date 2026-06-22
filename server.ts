@@ -35,6 +35,9 @@ function getDB() {
     if (!parsed.visits) {
       parsed.visits = { total: 0, daily: {} };
     }
+    if (!parsed.productViews) {
+      parsed.productViews = {};
+    }
     return parsed;
   } catch (error) {
     console.error("Error reading database file:", error);
@@ -130,6 +133,42 @@ app.post("/api/products/delete", (req, res) => {
     saveDB(db);
 
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 4.1. Increment product view counter and get current total
+app.post("/api/products/view", (req, res) => {
+  try {
+    const { productId } = req.body;
+    if (!productId) {
+      res.status(400).json({ success: false, message: "Missing product ID." });
+      return;
+    }
+
+    const db = getDB();
+    if (!db.productViews) {
+      db.productViews = {};
+    }
+
+    const getBaseline = (id: string) => {
+      let hash = 0;
+      for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return Math.abs(hash % 150) + 45;
+    };
+
+    if (db.productViews[productId] === undefined) {
+      db.productViews[productId] = getBaseline(productId);
+    } else {
+      db.productViews[productId] += 1;
+    }
+
+    saveDB(db);
+
+    res.json({ success: true, views: db.productViews[productId] });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

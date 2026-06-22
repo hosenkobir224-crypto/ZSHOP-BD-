@@ -92,9 +92,15 @@ export default function App() {
     window.addEventListener("products_db_sync_update", fetchProducts);
     window.addEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
     
+    // Auto-poll merchant items periodically (every 15s) so customer catalog stays updated reactively
+    const pollInterval = setInterval(() => {
+      fetchProducts();
+    }, 15000);
+    
     return () => {
       window.removeEventListener("products_db_sync_update", fetchProducts);
       window.removeEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
+      clearInterval(pollInterval);
     };
   }, []);
 
@@ -397,7 +403,8 @@ export default function App() {
         !query ||
         prod.title.toLowerCase().includes(query) ||
         prod.category.toLowerCase().includes(query) ||
-        prod.description.toLowerCase().includes(query);
+        prod.description.toLowerCase().includes(query) ||
+        (prod.merchantShopName && prod.merchantShopName.toLowerCase().includes(query));
 
       // Price limits
       let matchesPrice = true;
