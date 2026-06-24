@@ -440,6 +440,23 @@ app.post("/api/orders/add", (req, res) => {
   }
 });
 
+// 10b. Admin Orders Sync
+app.post("/api/admin/orders/sync", (req, res) => {
+  try {
+    const { orders } = req.body;
+    if (!orders || !Array.isArray(orders)) {
+      res.status(400).json({ success: false, message: "Invalid orders array." });
+      return;
+    }
+    const db = getDB();
+    db.orders = orders;
+    saveDB(db);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 10a. Affiliate - Register
 app.post("/api/affiliates/register", (req, res) => {
   try {

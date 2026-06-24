@@ -428,6 +428,13 @@ export default function AdminPanel({
       setOrders(updatedOrders);
       localStorage.setItem("zshop_bd_orders_v1", JSON.stringify(updatedOrders));
       window.dispatchEvent(new Event("storage_orders_update"));
+
+      // Sync status change to server database
+      fetch("/api/admin/orders/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders: updatedOrders })
+      }).catch(err => console.error("Sync order status to server failed:", err));
     } catch (err) {
       console.error("Order status update failed:", err);
     }
@@ -439,7 +446,23 @@ export default function AdminPanel({
         const filtered = orders.filter(ord => ord.id !== orderId);
         setOrders(filtered);
         localStorage.setItem("zshop_bd_orders_v1", JSON.stringify(filtered));
+
+        // Track deleted order IDs locally to prevent them from re-merging from the server
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_orders_v1");
+        const deletedIds = deletedRaw ? JSON.parse(deletedRaw) : [];
+        if (!deletedIds.includes(orderId)) {
+          deletedIds.push(orderId);
+          localStorage.setItem("zshop_bd_deleted_orders_v1", JSON.stringify(deletedIds));
+        }
+
         window.dispatchEvent(new Event("storage_orders_update"));
+
+        // Sync deletion to server database
+        fetch("/api/admin/orders/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orders: filtered })
+        }).catch(err => console.error("Sync order deletion to server failed:", err));
       } catch (err) {
         console.error(err);
       }
@@ -449,9 +472,26 @@ export default function AdminPanel({
   const handleClearAllOrders = () => {
     if (window.confirm("সাবধান! আপনি কি সব অর্ডার এক ক্লিকে পরিষ্কার করতে চান?")) {
       try {
+        // Collect all deleted order IDs
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_orders_v1");
+        const deletedIds = deletedRaw ? JSON.parse(deletedRaw) : [];
+        orders.forEach(ord => {
+          if (!deletedIds.includes(ord.id)) {
+            deletedIds.push(ord.id);
+          }
+        });
+        localStorage.setItem("zshop_bd_deleted_orders_v1", JSON.stringify(deletedIds));
+
         setOrders([]);
         localStorage.setItem("zshop_bd_orders_v1", JSON.stringify([]));
         window.dispatchEvent(new Event("storage_orders_update"));
+
+        // Sync clear to server database
+        fetch("/api/admin/orders/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orders: [] })
+        }).catch(err => console.error("Sync clear all orders to server failed:", err));
       } catch (err) {
         console.error(err);
       }

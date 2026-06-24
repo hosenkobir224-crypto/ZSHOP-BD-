@@ -62,8 +62,44 @@ export default function App() {
       const res = await fetch("/api/orders");
       const data = await res.json();
       if (data.success && data.orders) {
-        setOrders(data.orders);
-        localStorage.setItem("zshop_bd_orders_v1", JSON.stringify(data.orders));
+        // Retrieve locally saved orders and deleted order tracker
+        const savedRaw = localStorage.getItem("zshop_bd_orders_v1");
+        const saved = savedRaw ? JSON.parse(savedRaw) : [];
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_orders_v1");
+        const deletedIds = deletedRaw ? JSON.parse(deletedRaw) : [];
+
+        // Build index of server orders
+        const serverOrderIds = new Set(data.orders.map((o: any) => o.id));
+
+        // Filter out any locally deleted orders
+        const activeSaved = saved.filter((o: any) => !deletedIds.includes(o.id));
+
+        // Merge server orders with active saved orders that are not already on the server
+        const mergedOrders = [...data.orders];
+        activeSaved.forEach((so: any) => {
+          if (!serverOrderIds.has(so.id)) {
+            mergedOrders.push(so);
+          }
+        });
+
+        // Sort merged orders by timestamp descending
+        mergedOrders.sort((a: any, b: any) => {
+          const timeA = new Date(a.timestamp || 0).getTime();
+          const timeB = new Date(b.timestamp || 0).getTime();
+          return timeB - timeA;
+        });
+
+        setOrders(mergedOrders);
+        localStorage.setItem("zshop_bd_orders_v1", JSON.stringify(mergedOrders));
+
+        // If the local database has restored some missing orders, sync them back to the server's db.json
+        if (mergedOrders.length > data.orders.length) {
+          fetch("/api/admin/orders/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ orders: mergedOrders })
+          }).catch(err => console.error("Restore server orders failed:", err));
+        }
       }
     } catch (err) {
       console.error("Failed to fetch server orders:", err);
