@@ -61,6 +61,7 @@ interface ProductDetailModalProps {
   products?: Product[]; // Pass full products catalog for related recommendations
   onSelectProduct?: (product: Product) => void; // Support swapping active product
   setSearchQuery?: (query: string) => void;
+  onViewShop?: (shopName: string) => void;
 }
 
 function getCategorySpecs(category: string) {
@@ -97,6 +98,7 @@ export default function ProductDetailModal({
   products = [],
   onSelectProduct,
   setSearchQuery,
+  onViewShop,
 }: ProductDetailModalProps) {
   // Option Selectors
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -1031,9 +1033,13 @@ export default function ProductDetailModal({
             </span>
             <button 
               onClick={() => {
-                if (setSearchQuery && product) {
+                if (product) {
                   const shopName = product.merchantShopName || "ZSHOP BD";
-                  setSearchQuery(shopName);
+                  if (onViewShop) {
+                    onViewShop(shopName);
+                  } else if (setSearchQuery) {
+                    setSearchQuery(shopName);
+                  }
                   onClose();
                 }
               }}

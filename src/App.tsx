@@ -27,6 +27,7 @@ import { initMetaPixel, trackPixelEvent } from "./lib/metaPixel";
 import CustomerProfile from "./components/CustomerProfile";
 import FlashSale from "./components/FlashSale";
 import SearchResultsView from "./components/SearchResultsView";
+import ShopView from "./components/ShopView";
 import { Product, CartItem, Order } from "./types";
 import { PRODUCTS, CATEGORIES } from "./data";
 
@@ -178,6 +179,7 @@ export default function App() {
   // State managers
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedShopName, setSelectedShopName] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [cartInitialStep, setCartInitialStep] = useState<"cart" | "form">("cart");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -477,339 +479,359 @@ export default function App() {
         cart={cart}
         setIsCartOpen={setIsCartOpen}
         selectedCategory={selectedCategory}
-        setSelectedCategory={setSelectedCategory}
+        setSelectedCategory={(catId) => {
+          setSelectedCategory(catId);
+          setSelectedShopName(null);
+        }}
         searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
+        setSearchQuery={(query) => {
+          setSearchQuery(query);
+          if (query) {
+            setSelectedShopName(null);
+          }
+        }}
         onOpenProfile={() => setIsCustomerProfileOpen(true)}
         products={products}
       />
 
       <main className="flex-1">
-        {/* 2. Top Promotional Banner Slider */}
-        <Hero onCtaClick={handleCtaCategoryClick} />
+        {selectedShopName ? (
+          <ShopView
+            shopName={selectedShopName}
+            products={products}
+            onClose={() => setSelectedShopName(null)}
+            onAddToCart={handleAddToCart}
+            onOrderNow={handleOrderNow}
+            onOpenQuickView={handleOpenQuickView}
+          />
+        ) : (
+          <>
+            {/* 2. Top Promotional Banner Slider */}
+            <Hero onCtaClick={handleCtaCategoryClick} />
 
-        {/* 3. Horizontal Rounded Category Badges Grid */}
-        <section className="w-full bg-linear-to-b from-white to-gray-50/50 py-10 px-4 sm:px-6 lg:px-8 border-b border-gray-100" id="quick-categories-tray">
-          <div className="max-w-7xl mx-auto text-center">
-            <span className="text-[10px] tracking-[0.2em] uppercase font-mono font-black text-slate-400 block mb-2">
-              RETAIL DEPARTMENTS
-            </span>
-            <h2 className="text-xl sm:text-2xl font-display font-black text-slate-950 tracking-tight mb-8">
-              Browse by Shopping Category
-            </h2>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat.id;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat.id);
-                      document.getElementById("catalog-interactive-anchor")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className={`p-5 rounded-2xl border-2 text-center flex flex-col items-center justify-center gap-3 transition-all duration-300 group cursor-pointer focus:outline-none ${isActive ? 'bg-slate-950 border-slate-950 text-white shadow-lg' : 'bg-white border-gray-150 text-gray-700 hover:border-amber-400 hover:shadow-md'}`}
-                  >
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isActive ? 'bg-slate-800' : 'bg-slate-50 group-hover:bg-amber-100 group-hover:scale-105'}`}>
-                      {renderCategoryIcon(cat.icon, isActive)}
-                    </div>
-                    <div>
-                      <p className={`text-xs font-display font-extrabold ${isActive ? 'text-white' : 'text-slate-900 group-hover:text-amber-600'}`}>
-                        {cat.name}
-                      </p>
-                      <p className={`text-[9px] mt-0.5 line-clamp-1 leading-none ${isActive ? 'text-slate-300' : 'text-gray-400 font-medium'}`}>
-                        {cat.id === "all" ? "Whole Store catalog" : `${cat.id} items`}
-                      </p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* Dynamic Flash Sale Component */}
-        <FlashSale
-          products={products}
-          orders={orders}
-          onAddToCart={handleAddToCart}
-          onOrderNow={handleOrderNow}
-          onOpenQuickView={handleOpenQuickView}
-        />
-
-        {/* 4. Filter Panel Box */}
-        <section className="w-full bg-white pt-10 px-4 sm:px-6 lg:px-8 border-b border-gray-100" id="catalog-interactive-anchor">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-5 pb-4 border-b border-gray-100">
-            <div className="text-left w-full md:w-auto">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-1 bg-amber-500 rounded-full inline-block" />
-                <span className="text-xs font-mono font-bold tracking-widest text-amber-600 uppercase">
-                  {selectedCategory === "all" ? "STORE GENERAL CATALOG" : `${activeCategoryDetail?.name.toUpperCase()}`}
+            {/* 3. Horizontal Rounded Category Badges Grid */}
+            <section className="w-full bg-linear-to-b from-white to-gray-50/50 py-10 px-4 sm:px-6 lg:px-8 border-b border-gray-100" id="quick-categories-tray">
+              <div className="max-w-7xl mx-auto text-center">
+                <span className="text-[10px] tracking-[0.2em] uppercase font-mono font-black text-slate-400 block mb-2">
+                  RETAIL DEPARTMENTS
                 </span>
+                <h2 className="text-xl sm:text-2xl font-display font-black text-slate-950 tracking-tight mb-8">
+                  Browse by Shopping Category
+                </h2>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {CATEGORIES.map((cat) => {
+                    const isActive = selectedCategory === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.id);
+                          document.getElementById("catalog-interactive-anchor")?.scrollIntoView({ behavior: "smooth" });
+                        }}
+                        className={`p-5 rounded-2xl border-2 text-center flex flex-col items-center justify-center gap-3 transition-all duration-300 group cursor-pointer focus:outline-none ${isActive ? 'bg-slate-950 border-slate-950 text-white shadow-lg' : 'bg-white border-gray-150 text-gray-700 hover:border-amber-400 hover:shadow-md'}`}
+                      >
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isActive ? 'bg-slate-800' : 'bg-slate-50 group-hover:bg-amber-100 group-hover:scale-105'}`}>
+                          {renderCategoryIcon(cat.icon, isActive)}
+                        </div>
+                        <div>
+                          <p className={`text-xs font-display font-extrabold ${isActive ? 'text-white' : 'text-slate-900 group-hover:text-amber-600'}`}>
+                            {cat.name}
+                          </p>
+                          <p className={`text-[9px] mt-0.5 line-clamp-1 leading-none ${isActive ? 'text-slate-300' : 'text-gray-400 font-medium'}`}>
+                            {cat.id === "all" ? "Whole Store catalog" : `${cat.id} items`}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <h1 className="text-2xl font-display font-black text-slate-950 mt-1">
-                {searchQuery ? `Searching for: "${searchQuery}"` : activeCategoryDetail?.name}
-              </h1>
-              <p className="text-xs text-gray-400 font-medium mt-1 font-sans">
-                {searchQuery 
-                  ? `Showing ${filteredProducts.length} results matching keywords` 
-                  : `Showing authentic products curated for Bangladeshi buyers`
-                }
-              </p>
-            </div>
+            </section>
 
-            {/* Expander Drawer Tray Controls */}
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
-              <button
-                onClick={() => setIsFilterTrayExpanded(!isFilterTrayExpanded)}
-                className={`px-4.5 py-2.5 rounded-xl border flex items-center gap-2.5 text-xs font-display font-bold transition-all focus:outline-none cursor-pointer ${isFilterTrayExpanded ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-800 border-gray-200 hover:bg-gray-50"}`}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                <span>Filter & Sort Options</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isFilterTrayExpanded ? "rotate-180" : ""}`} />
-              </button>
-            </div>
-          </div>
+            {/* Dynamic Flash Sale Component */}
+            <FlashSale
+              products={products}
+              orders={orders}
+              onAddToCart={handleAddToCart}
+              onOrderNow={handleOrderNow}
+              onOpenQuickView={handleOpenQuickView}
+            />
 
-          {/* Collapsible Filters Bar */}
-          {isFilterTrayExpanded && (
-            <div className="max-w-7xl mx-auto py-5 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn" id="collapsible-filters-drawer">
-              
-              {/* Category selector */}
-              <div className="space-y-2 text-left">
-                <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
-                  Shopping Category
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-700 focus:outline-none font-sans font-semibold appearance-none cursor-pointer"
-                  >
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
-                    <ChevronDown className="w-4 h-4" />
+            {/* 4. Filter Panel Box */}
+            <section className="w-full bg-white pt-10 px-4 sm:px-6 lg:px-8 border-b border-gray-100" id="catalog-interactive-anchor">
+              <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-5 pb-4 border-b border-gray-100">
+                <div className="text-left w-full md:w-auto">
+                  <div className="flex items-center gap-2">
+                    <span className="w-4 h-1 bg-amber-500 rounded-full inline-block" />
+                    <span className="text-xs font-mono font-bold tracking-widest text-amber-600 uppercase">
+                      {selectedCategory === "all" ? "STORE GENERAL CATALOG" : `${activeCategoryDetail?.name.toUpperCase()}`}
+                    </span>
                   </div>
+                  <h1 className="text-2xl font-display font-black text-slate-950 mt-1">
+                    {searchQuery ? `Searching for: "${searchQuery}"` : activeCategoryDetail?.name}
+                  </h1>
+                  <p className="text-xs text-gray-400 font-medium mt-1 font-sans">
+                    {searchQuery 
+                      ? `Showing ${filteredProducts.length} results matching keywords` 
+                      : `Showing authentic products curated for Bangladeshi buyers`
+                    }
+                  </p>
                 </div>
-              </div>
 
-              {/* Price Ranges Filter */}
-              <div className="space-y-2 text-left">
-                <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
-                  Filter by Price BDT
-                </label>
-                <div className="grid grid-cols-4 gap-1.5 bg-slate-50 p-1 rounded-xl border border-gray-150">
-                  {(["all", "low", "mid", "high"] as const).map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => setPriceRange(r)}
-                      className={`py-2 px-1 text-[10px] font-display font-extrabold rounded-lg capitalize transition-colors focus:outline-none cursor-pointer ${priceRange === r ? "bg-white text-slate-900 shadow-xs" : "text-gray-500 hover:text-slate-900"}`}
-                    >
-                      {r === "all" && "All Prices"}
-                      {r === "low" && "< 3k"}
-                      {r === "mid" && "3k - 8k"}
-                      {r === "high" && "> 8k"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sorter Selector */}
-              <div className="space-y-2 text-left">
-                <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
-                  Order / Sort By
-                </label>
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-700 focus:outline-none font-sans font-semibold appearance-none cursor-pointer"
+                {/* Expander Drawer Tray Controls */}
+                <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                  <button
+                    onClick={() => setIsFilterTrayExpanded(!isFilterTrayExpanded)}
+                    className={`px-4.5 py-2.5 rounded-xl border flex items-center gap-2.5 text-xs font-display font-bold transition-all focus:outline-none cursor-pointer ${isFilterTrayExpanded ? "bg-slate-950 text-white border-slate-950" : "bg-white text-slate-800 border-gray-200 hover:bg-gray-50"}`}
                   >
-                    <option value="default">Release Date (Default)</option>
-                    <option value="priceAsc">Price: Low to High</option>
-                    <option value="priceDesc">Price: High to Low</option>
-                    <option value="rating">Top Customer Ratings</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
-                    <ChevronDown className="w-4 h-4" />
-                  </div>
+                    <SlidersHorizontal className="w-4 h-4" />
+                    <span>Filter & Sort Options</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isFilterTrayExpanded ? "rotate-180" : ""}`} />
+                  </button>
                 </div>
               </div>
 
-            </div>
-          )}
-        </section>
-
-        {/* 5. Main Catalog Layout */}
-        <section className="w-full bg-white py-12 px-4 sm:px-6 lg:px-8" id="catalog-products-listings">
-          <div className="max-w-7xl mx-auto">
-            
-            {/* SEARCH OR CUSTOM FILTER ACTIVE: Unified Single grid list */}
-            {searchQuery || priceRange !== "all" || selectedCategory !== "all" ? (
-              <div>
-                {filteredProducts.length === 0 ? (
-                  <div className="py-20 text-center" id="no-matching-results-fallback">
-                    <div className="w-16 h-16 bg-slate-50 border border-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
-                      <ShoppingBag className="w-6 h-6 text-gray-400" />
+              {/* Collapsible Filters Bar */}
+              {isFilterTrayExpanded && (
+                <div className="max-w-7xl mx-auto py-5 border-b border-gray-100 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fadeIn" id="collapsible-filters-drawer">
+                  
+                  {/* Category selector */}
+                  <div className="space-y-2 text-left">
+                    <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
+                      Shopping Category
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-700 focus:outline-none font-sans font-semibold appearance-none cursor-pointer"
+                      >
+                        {CATEGORIES.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
                     </div>
-                    <h3 className="text-sm font-display font-bold text-slate-950">No Products Found</h3>
-                    <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1.5">
-                      We couldn't locate any products in category "{selectedCategory}" matching your constraints. Clear filters and try again!
-                    </p>
-                    <button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setSelectedCategory("all");
-                        setPriceRange("all");
-                        setSortBy("default");
-                      }}
-                      className="mt-6 px-6 py-2.5 bg-slate-950 text-white text-xs font-display font-bold rounded-xl hover:bg-amber-400 hover:text-slate-950 transition-colors cursor-pointer focus:outline-none"
-                    >
-                      Reset All Filters
-                    </button>
+                  </div>
+
+                  {/* Price Ranges Filter */}
+                  <div className="space-y-2 text-left">
+                    <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
+                      Filter by Price BDT
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5 bg-slate-50 p-1 rounded-xl border border-gray-150">
+                      {(["all", "low", "mid", "high"] as const).map((r) => (
+                        <button
+                          key={r}
+                          onClick={() => setPriceRange(r)}
+                          className={`py-2 px-1 text-[10px] font-display font-extrabold rounded-lg capitalize transition-colors focus:outline-none cursor-pointer ${priceRange === r ? "bg-white text-slate-900 shadow-xs" : "text-gray-500 hover:text-slate-900"}`}
+                        >
+                          {r === "all" && "All Prices"}
+                          {r === "low" && "< 3k"}
+                          {r === "mid" && "3k - 8k"}
+                          {r === "high" && "> 8k"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sorter Selector */}
+                  <div className="space-y-2 text-left">
+                    <label className="block text-xs font-display font-bold text-slate-900 uppercase tracking-wide">
+                      Order / Sort By
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="w-full bg-white border border-gray-200 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-xs text-gray-700 focus:outline-none font-sans font-semibold appearance-none cursor-pointer"
+                      >
+                        <option value="default">Release Date (Default)</option>
+                        <option value="priceAsc">Price: Low to High</option>
+                        <option value="priceDesc">Price: High to Low</option>
+                        <option value="rating">Top Customer Ratings</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-gray-400">
+                        <ChevronDown className="w-4 h-4" />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </section>
+
+            {/* 5. Main Catalog Layout */}
+            <section className="w-full bg-white py-12 px-4 sm:px-6 lg:px-8" id="catalog-products-listings">
+              <div className="max-w-7xl mx-auto">
+                
+                {/* SEARCH OR CUSTOM FILTER ACTIVE: Unified Single grid list */}
+                {searchQuery || priceRange !== "all" || selectedCategory !== "all" ? (
+                  <div>
+                    {filteredProducts.length === 0 ? (
+                      <div className="py-20 text-center" id="no-matching-results-fallback">
+                        <div className="w-16 h-16 bg-slate-50 border border-gray-100 rounded-full flex items-center justify-center text-gray-400 mx-auto mb-4">
+                          <ShoppingBag className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <h3 className="text-sm font-display font-bold text-slate-950">No Products Found</h3>
+                        <p className="text-xs text-gray-500 max-w-sm mx-auto mt-1.5">
+                          We couldn't locate any products in category "{selectedCategory}" matching your constraints. Clear filters and try again!
+                        </p>
+                        <button
+                          onClick={() => {
+                            setSearchQuery("");
+                            setSelectedCategory("all");
+                            setPriceRange("all");
+                            setSortBy("default");
+                          }}
+                          className="mt-6 px-6 py-2.5 bg-slate-950 text-white text-xs font-display font-bold rounded-xl hover:bg-amber-400 hover:text-slate-950 transition-colors cursor-pointer focus:outline-none"
+                        >
+                          Reset All Filters
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+                        {filteredProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onOrderNow={handleOrderNow}
+                            onOpenQuickView={handleOpenQuickView}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                    {filteredProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={handleAddToCart}
-                        onOrderNow={handleOrderNow}
-                        onOpenQuickView={handleOpenQuickView}
-                      />
-                    ))}
+                  // DEFAULT HOMEPAGE FEED (Separated Sections)
+                  <div className="space-y-16">
+                    
+                    {/* A. Trending collection */}
+                    <div id="home-trending-section">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="text-left">
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-500">
+                            <TrendingUp className="w-3.5 h-3.5 fill-amber-500/10" />
+                            <span>Most Wanted Right Now</span>
+                          </div>
+                          <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
+                            Trending Products
+                          </h2>
+                        </div>
+                        <div className="h-0.5 bg-gray-100 flex-1 mx-6 hidden sm:block" />
+                        <span className="text-[10px] font-mono uppercase bg-slate-50 text-slate-500 border border-gray-150 rounded-lg py-1 px-2.5 font-medium">
+                          Fast Selling
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+                        {trendingProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onOrderNow={handleOrderNow}
+                            onOpenQuickView={handleOpenQuickView}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. New Arrivals section */}
+                    <div id="home-new-arrivals-section">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="text-left">
+                          <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-500">
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Fresh Off The Factory</span>
+                          </div>
+                          <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
+                            New Arrivals
+                          </h2>
+                        </div>
+                        <div className="h-0.5 bg-gray-100 flex-1 mx-6 hidden sm:block" />
+                        <span className="text-[10px] font-mono uppercase bg-slate-50 text-slate-500 border border-gray-150 rounded-lg py-1 px-2.5 font-medium">
+                          Fresh Batch
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+                        {newArrivalProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onOrderNow={handleOrderNow}
+                            onOpenQuickView={handleOpenQuickView}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* C. Overall Store Catalog Section (Satisfies rich grid) */}
+                    <div id="home-full-catalog-section">
+                      <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                        <div className="text-left">
+                          <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                            Explore Entire Inventory
+                          </p>
+                          <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
+                            All Curated Items
+                          </h2>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
+                        {filteredProducts.map((product) => (
+                          <ProductCard
+                            key={product.id}
+                            product={product}
+                            onAddToCart={handleAddToCart}
+                            onOrderNow={handleOrderNow}
+                            onOpenQuickView={handleOpenQuickView}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
                   </div>
                 )}
               </div>
-            ) : (
-              // DEFAULT HOMEPAGE FEED (Separated Sections)
-              <div className="space-y-16">
-                
-                {/* A. Trending collection */}
-                <div id="home-trending-section">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="text-left">
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-500">
-                        <TrendingUp className="w-3.5 h-3.5 fill-amber-500/10" />
-                        <span>Most Wanted Right Now</span>
-                      </div>
-                      <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
-                        Trending Products
-                      </h2>
-                    </div>
-                    <div className="h-0.5 bg-gray-100 flex-1 mx-6 hidden sm:block" />
-                    <span className="text-[10px] font-mono uppercase bg-slate-50 text-slate-500 border border-gray-150 rounded-lg py-1 px-2.5 font-medium">
-                      Fast Selling
-                    </span>
-                  </div>
+            </section>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                    {trendingProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={handleAddToCart}
-                        onOrderNow={handleOrderNow}
-                        onOpenQuickView={handleOpenQuickView}
-                      />
-                    ))}
-                  </div>
+            {/* 6. Professional trust details banner */}
+            <section className="bg-slate-50 py-16 px-4 border-t border-gray-200/80" id="trust-details-banner">
+              <div className="max-w-4xl mx-auto text-center space-y-6">
+                <h3 className="text-lg sm:text-xl font-display font-black uppercase text-slate-950">
+                  Why Shops of Bangladesh trust us?
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-medium">
+                  We pledge 100% customer protection. Each clothing weave, luxury chronograph movement, and micro-component of home electronics goes through strict manual inspection procedures in Dhaka warehouses before courier labels are printed. No fake knockoffs, no cheap clones — we sell only verified premium authenticity at realistic prices.
+                </p>
+                <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
+                  <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    Dhaka Hub Call Verification
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold opacity-95">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    Bangladeshi Power Plug Compliant
+                  </span>
+                  <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold opacity-90">
+                    <PhoneCall className="w-4 h-4 text-emerald-500" />
+                    Instant Phone Hotline support
+                  </span>
                 </div>
-
-                {/* B. New Arrivals section */}
-                <div id="home-new-arrivals-section">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="text-left">
-                      <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-500">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Fresh Off The Factory</span>
-                      </div>
-                      <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
-                        New Arrivals
-                      </h2>
-                    </div>
-                    <div className="h-0.5 bg-gray-100 flex-1 mx-6 hidden sm:block" />
-                    <span className="text-[10px] font-mono uppercase bg-slate-50 text-slate-500 border border-gray-150 rounded-lg py-1 px-2.5 font-medium">
-                      Fresh Batch
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                    {newArrivalProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={handleAddToCart}
-                        onOrderNow={handleOrderNow}
-                        onOpenQuickView={handleOpenQuickView}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* C. Overall Store Catalog Section (Satisfies rich grid) */}
-                <div id="home-full-catalog-section">
-                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
-                    <div className="text-left">
-                      <p className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
-                        Explore Entire Inventory
-                      </p>
-                      <h2 className="text-1.5xl sm:text-2xl font-display font-black text-slate-950 mt-1">
-                        All Curated Items
-                      </h2>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
-                    {filteredProducts.map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onAddToCart={handleAddToCart}
-                        onOrderNow={handleOrderNow}
-                        onOpenQuickView={handleOpenQuickView}
-                      />
-                    ))}
-                  </div>
-                </div>
-
               </div>
-            )}
-          </div>
-        </section>
-
-        {/* 6. Professional trust details banner */}
-        <section className="bg-slate-50 py-16 px-4 border-t border-gray-200/80" id="trust-details-banner">
-          <div className="max-w-4xl mx-auto text-center space-y-6">
-            <h3 className="text-lg sm:text-xl font-display font-black uppercase text-slate-950">
-              Why Shops of Bangladesh trust us?
-            </h3>
-            <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-medium">
-              We pledge 100% customer protection. Each clothing weave, luxury chronograph movement, and micro-component of home electronics goes through strict manual inspection procedures in Dhaka warehouses before courier labels are printed. No fake knockoffs, no cheap clones — we sell only verified premium authenticity at realistic prices.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-              <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Dhaka Hub Call Verification
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold opacity-95">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Bangladeshi Power Plug Compliant
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-700 bg-white px-3.5 py-2 border border-gray-200/60 rounded-xl font-semibold opacity-90">
-                <PhoneCall className="w-4 h-4 text-emerald-500" />
-                Instant Phone Hotline support
-              </span>
-            </div>
-          </div>
-        </section>
-
+            </section>
+          </>
+        )}
       </main>
 
       {/* 7. Primary footer section */}
@@ -887,6 +909,7 @@ export default function App() {
           }, 150);
         }}
         setSearchQuery={setSearchQuery}
+        onViewShop={(shopName) => setSelectedShopName(shopName)}
       />
 
       {/* Smooth back to top trigger */}
