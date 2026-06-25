@@ -282,6 +282,8 @@ export default function AdminPanel({
   const [newAffiliateCommission, setNewAffiliateCommission] = useState("100");
   const [addSuccessMessage, setAddSuccessMessage] = useState("");
   const [imageSourceType, setImageSourceType] = useState<"link" | "upload">("link");
+  const [newVideo, setNewVideo] = useState("");
+  const [videoSourceType, setVideoSourceType] = useState<"link" | "upload">("upload");
 
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,6 +296,23 @@ export default function AdminPanel({
       reader.onloadend = () => {
         if (typeof reader.result === "string") {
           setNewImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleVideoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 15 * 1024 * 1024) {
+        alert("ভিডিওর সাইজ অনেক বড়! দয়া করে ১৫ মেগাবাইটের চেয়ে ছোট ভিডিও ফাইল আপলোড করুন।");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setNewVideo(reader.result);
         }
       };
       reader.readAsDataURL(file);
@@ -562,6 +581,7 @@ export default function AdminPanel({
       price: priceNum,
       originalPrice: originalPriceNum,
       image: imageToUse,
+      video: newVideo.trim() || undefined,
       category: newCategory,
       rating: 4.8,
       reviewsCount: 1,
@@ -584,6 +604,7 @@ export default function AdminPanel({
     setNewPrice("");
     setNewOriginalPrice("");
     setNewImage("");
+    setNewVideo("");
     setNewSizes("");
     setNewColors("");
     setNewIsAffiliateReady(true);
@@ -1507,6 +1528,102 @@ export default function AdminPanel({
                               <button
                                 type="button"
                                 onClick={() => setNewImage("")}
+                                className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition-colors cursor-pointer mr-1 shrink-0"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Video URL / Local gallery upload selector */}
+                    <div className="space-y-2">
+                      <label className="block text-slate-400 font-mono tracking-wider uppercase mb-1.5">
+                        Product Video option (পণ্যের ভিডিও সংযুক্তকরণ - ইচ্ছাধীন)
+                      </label>
+                      
+                      {/* Segmented control tabs */}
+                      <div className="flex gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-xl w-full sm:w-80">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVideoSourceType("link");
+                          }}
+                          className={`flex-1 text-center py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            videoSourceType === "link"
+                              ? "bg-amber-400 text-slate-950 font-black"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          ভিডিও লিঙ্ক দিন
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVideoSourceType("upload");
+                          }}
+                          className={`flex-1 text-center py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                            videoSourceType === "upload"
+                              ? "bg-amber-400 text-slate-950 font-black"
+                              : "text-slate-400 hover:text-white"
+                          }`}
+                        >
+                          গ্যালারি থেকে আপলোড
+                        </button>
+                      </div>
+
+                      {videoSourceType === "link" ? (
+                        <div className="space-y-2">
+                          <input
+                            type="url"
+                            placeholder="https://example.com/your-video-url.mp4..."
+                            value={newVideo.startsWith("data:video") ? "" : newVideo}
+                            onChange={(e) => setNewVideo(e.target.value)}
+                            className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 focus:border-amber-400 rounded-xl text-white focus:outline-none font-mono text-[10px]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="relative border border-dashed border-slate-800 hover:border-amber-400/50 bg-slate-950/45 rounded-xl p-4 transition-all flex flex-col items-center justify-center text-center gap-2">
+                            <input
+                              type="file"
+                              accept="video/*"
+                              onChange={handleVideoFileUpload}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                              id="gallery-video-file-uploader"
+                            />
+                            
+                            <div className="w-10 h-10 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-400 flex items-center justify-center pointer-events-none">
+                              <Plus className="w-5 h-5" />
+                            </div>
+
+                            <p className="text-xs font-semibold text-slate-300 pointer-events-none">
+                              এখানে ক্লিক করে গ্যালারি থেকে ভিডিও সিলেক্ট করুন
+                            </p>
+                            <p className="text-[10px] text-slate-500 pointer-events-none uppercase font-mono">
+                              MP4, WEBM (Max: 15MB)
+                            </p>
+                          </div>
+
+                          {/* Preview container */}
+                          {newVideo && (
+                            <div className="flex items-center gap-3 p-2 bg-slate-900 border border-slate-800 rounded-xl">
+                              <div className="w-12 h-12 rounded-lg bg-slate-950 border border-slate-800 shrink-0 overflow-hidden relative">
+                                <video 
+                                  src={newVideo} 
+                                  className="w-full h-full object-cover"
+                                  muted
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[11px] font-bold text-slate-200">ভিডিও সফলভাবে লোড হয়েছে</p>
+                                <p className="text-[9px] font-mono text-emerald-450 uppercase tracking-widest mt-0.5">READY TO PLAY</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setNewVideo("")}
                                 className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 rounded-lg transition-colors cursor-pointer mr-1 shrink-0"
                               >
                                 <X className="w-4 h-4" />

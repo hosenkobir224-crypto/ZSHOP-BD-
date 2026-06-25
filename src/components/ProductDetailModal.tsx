@@ -386,12 +386,16 @@ export default function ProductDetailModal({
   // Compute alternative thumb snapshots to simulate a real multi-photo gallery
   const alternativeThumbnails = useMemo(() => {
     if (!product) return [];
-    return [
+    const thumbs = [
       { id: "thumb-1", label: "মূল ভিউ", image: product.image, styleClass: "object-cover" },
       { id: "thumb-2", label: "ডিটেইল ভিউ", image: product.image, styleClass: "object-cover scale-150 origin-center" },
       { id: "thumb-3", label: "স্টাইলিশ ফ্রন্ট", image: product.image, styleClass: "object-cover brightness-[1.04] contrast-105" },
       { id: "thumb-4", label: "প্যাকিং সিল", image: product.image, styleClass: "object-cover brightness-95 sepia-[0.1]" }
     ];
+    if (product.video) {
+      thumbs.push({ id: "thumb-video", label: "ভিডিও রিভিউ", image: product.image, styleClass: "object-cover opacity-80" });
+    }
+    return thumbs;
   }, [product]);
 
   // Helper to get deterministic sold count matches style
@@ -765,12 +769,22 @@ export default function ProductDetailModal({
             
             {/* Primary Gallery viewport */}
             <div className="relative aspect-square w-full rounded-xl bg-slate-50 border border-gray-100 overflow-hidden select-none shadow-3xs group">
-              <img
-                src={activeImage}
-                alt={product.title}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300"
-              />
+              {activeThumbId === "thumb-video" && product.video ? (
+                <video
+                  src={product.video}
+                  controls
+                  autoPlay
+                  className="w-full h-full object-contain bg-black"
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={activeImage}
+                  alt={product.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover object-center group-hover:scale-102 transition-transform duration-300"
+                />
+              )}
 
               {/* Red Discount Badges Badge exact in top left corner */}
               <span className="absolute top-3 left-3 bg-rose-600 text-white font-extrabold text-[11px] px-2.5 py-1 rounded-sm shadow-md tracking-wider">
@@ -789,9 +803,14 @@ export default function ProductDetailModal({
                     setActiveThumbId(thumb.id);
                     setActiveImage(thumb.image);
                   }}
-                  className={`w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 ${activeThumbId === thumb.id ? "border-[#fdb900] shadow-sm scale-102" : "border-gray-200 hover:border-gray-300"}`}
+                  className={`w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 relative ${activeThumbId === thumb.id ? "border-[#fdb900] shadow-sm scale-102" : "border-gray-200 hover:border-gray-300"}`}
                 >
                   <img src={thumb.image} alt={thumb.label} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${thumb.styleClass}`} />
+                  {thumb.id === "thumb-video" && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span className="text-white text-[9px] bg-[#f85606] px-1 py-0.5 rounded-xs font-black tracking-wide scale-90">🎥 PLAY</span>
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
