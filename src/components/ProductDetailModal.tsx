@@ -42,6 +42,7 @@ interface Review {
   comment: string;
   date: string;
   image?: string;
+  video?: string;
 }
 
 interface Question {
@@ -128,6 +129,7 @@ export default function ProductDetailModal({
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [newReviewComment, setNewReviewComment] = useState("");
   const [newReviewPhoto, setNewReviewPhoto] = useState<string | null>(null);
+  const [newReviewVideo, setNewReviewVideo] = useState<string | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
 
@@ -333,6 +335,7 @@ export default function ProductDetailModal({
       setNewReviewRating(5);
       setNewReviewComment("");
       setNewReviewPhoto(null);
+      setNewReviewVideo(null);
       setShowReviewForm(false);
       setReviewMessage("");
       setNewQuestionText("");
@@ -479,6 +482,50 @@ export default function ProductDetailModal({
     reader.readAsDataURL(file);
   };
 
+  const handleReviewVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 15 * 1024 * 1024) {
+      alert("ভিডিওর সাইজ ১৫ এমবির বেশি হতে পারবে না!");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setNewReviewVideo(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleMediaFile = (file: File) => {
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewReviewPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type.startsWith("video/")) {
+      if (file.size > 15 * 1024 * 1024) {
+        alert("ভিডিওর সাইজ ১৫ এমবির বেশি হতে পারবে না!");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewReviewVideo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      alert("শুধুমাত্র ছবি বা ভিডিও ফাইল আপলোড করা সম্ভব!");
+    }
+  };
+
+  const handleReviewMediaDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleMediaFile(files[0]);
+    }
+  };
+
   const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newReviewName.trim() || !newReviewComment.trim()) {
@@ -492,7 +539,8 @@ export default function ProductDetailModal({
       rating: newReviewRating,
       comment: newReviewComment.trim(),
       date: new Date().toLocaleDateString("bn-BD"),
-      image: newReviewPhoto || undefined
+      image: newReviewPhoto || undefined,
+      video: newReviewVideo || undefined
     };
 
     const nextReviews = [reviewItem, ...reviews];
@@ -502,6 +550,7 @@ export default function ProductDetailModal({
 
     setNewReviewComment("");
     setNewReviewPhoto(null);
+    setNewReviewVideo(null);
     setShowReviewForm(false);
     setReviewMessage("আপনার মূল্যবান রিভিউটি সফলভাবে প্রকাশিত হয়েছে। ধন্যবাদ!");
     setTimeout(() => setReviewMessage(""), 4000);
@@ -780,9 +829,42 @@ export default function ProductDetailModal({
             </div>
 
             {/* Product Title */}
-            <h1 className="text-lg md:text-xl font-bold text-[#0f172a] leading-tight font-sans tracking-tight mb-3">
+            <h1 className="text-lg md:text-xl font-bold text-[#0f172a] leading-tight font-sans tracking-tight mb-2">
               {product.title}
             </h1>
+
+            {/* Interactive Rating & Review Summary under the Title */}
+            <div className="flex flex-wrap items-center gap-3 mb-4 text-xs font-medium text-slate-600">
+              <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-md font-bold">
+                <span className="text-amber-500 text-xs">★</span>
+                <span>{roundedHeadingRating}</span>
+              </div>
+              <button 
+                onClick={() => {
+                  setActiveTab("reviews");
+                  setTimeout(() => {
+                    document.getElementById("product-tabs-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 100);
+                }}
+                className="text-indigo-600 hover:text-indigo-800 hover:underline font-bold transition-all cursor-pointer"
+              >
+                {reviews.length} টি কাস্টমার রিভিউ দেখুন
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={() => {
+                  setActiveTab("reviews");
+                  setShowReviewForm(true);
+                  setTimeout(() => {
+                    document.getElementById("product-tabs-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 100);
+                }}
+                className="text-emerald-600 hover:text-emerald-800 hover:underline font-bold transition-all cursor-pointer flex items-center gap-1"
+              >
+                <span>✍️</span>
+                <span>রিভিউ লিখুন</span>
+              </button>
+            </div>
 
             {/* Price Row section */}
             <div className="flex items-baseline gap-2.5 mb-5 bg-[#fafafa] p-4 rounded-xl border border-gray-100">
@@ -1120,7 +1202,7 @@ export default function ProductDetailModal({
         </div>
 
         {/* TAB GROUPS: DESCRIPTION, SPECIFICATIONS, Q&A AND REVIEWS */}
-        <div className="bg-white border border-gray-100 rounded-2xl shadow-xs mt-6 overflow-hidden text-left">
+        <div id="product-tabs-section" className="bg-white border border-gray-100 rounded-2xl shadow-xs mt-6 overflow-hidden text-left">
           <div className="flex border-b border-gray-100 bg-[#f8fafc] overflow-x-auto scrollbar-none">
             <button
               onClick={() => setActiveTab("detail")}
@@ -1228,7 +1310,7 @@ export default function ProductDetailModal({
                   <button
                     type="button"
                     onClick={() => setShowReviewForm(!showReviewForm)}
-                    className="bg-slate-900 hover:bg-[#f85606] text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition"
+                    className="bg-slate-900 hover:bg-[#f85606] text-white font-bold text-[10px] px-2.5 py-1.5 rounded-lg transition cursor-pointer"
                   >
                     রিভিউ লিখতে চান?
                   </button>
@@ -1240,28 +1322,46 @@ export default function ProductDetailModal({
 
                 {showReviewForm && (
                   <form onSubmit={handleSubmitReview} className="bg-[#f8fafc] p-4 border border-gray-200 rounded-xl space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block mb-1">নামঃ</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1">আপনার নামঃ</label>
                         <input
                           type="text"
                           required
                           value={newReviewName}
                           onChange={(e) => setNewReviewName(e.target.value)}
-                          className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs sm:text-sm"
+                          placeholder="উদাঃ কবির হোসাইন"
+                          className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs sm:text-sm focus:border-amber-500 focus:outline-none transition-colors"
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block mb-1">তারা রেটিংঃ</label>
-                        <select
-                          value={newReviewRating}
-                          onChange={(e) => setNewReviewRating(Number(e.target.value))}
-                          className="w-full bg-white border border-gray-250 rounded px-2.5 py-1.5 text-xs sm:text-sm outline-none"
-                        >
-                          <option value="5">★★★★★ (5 Stars)</option>
-                          <option value="4">★★★★☆ (4 Stars)</option>
-                          <option value="3">★★★☆☆ (3 Stars)</option>
-                        </select>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1">প্রোডাক্টের রেটিং দিনঃ</label>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          {[1, 2, 3, 4, 5].map((starValue) => (
+                            <button
+                              key={starValue}
+                              type="button"
+                              onClick={() => setNewReviewRating(starValue)}
+                              className="focus:outline-none transition-transform hover:scale-120 active:scale-95 duration-100"
+                              title={`${starValue} Stars`}
+                            >
+                              <Star
+                                className={`w-6 h-6 stroke-[1.8] ${
+                                  starValue <= newReviewRating
+                                    ? "text-amber-500 fill-amber-400"
+                                    : "text-gray-300 hover:text-amber-300"
+                                }`}
+                              />
+                            </button>
+                          ))}
+                          <span className="text-[10px] font-extrabold text-slate-700 ml-1.5">
+                            {newReviewRating === 5 && "চমৎকার! (5)"}
+                            {newReviewRating === 4 && "ভালো (4)"}
+                            {newReviewRating === 3 && "মোটামুটি (3)"}
+                            {newReviewRating === 2 && "খারাপ (2)"}
+                            {newReviewRating === 1 && "অত্যন্ত বাজে (1)"}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -1276,12 +1376,82 @@ export default function ProductDetailModal({
                       />
                     </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-500 block mb-1">ছবি সংযুক্ত করুন (ঐচ্ছিক):</label>
-                      <input type="file" accept="image/*" onChange={handleReviewPhotoUpload} className="text-xs" />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                        গ্যালারি থেকে ছবি অথবা ভিডিও সংযুক্ত করুন (ঐচ্ছিক):
+                      </label>
+                      
+                      <div 
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={handleReviewMediaDrop}
+                        className="border-2 border-dashed border-gray-300 hover:border-[#f85606] rounded-xl p-5 bg-white transition-all duration-200 cursor-pointer text-center relative group shadow-2xs"
+                      >
+                        <div className="flex flex-col items-center justify-center space-y-2 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="p-2.5 bg-rose-50 text-rose-500 rounded-xl group-hover:bg-rose-100 transition duration-200">
+                              📸
+                            </span>
+                            <span className="p-2.5 bg-indigo-50 text-indigo-500 rounded-xl group-hover:bg-indigo-100 transition duration-200">
+                              🎥
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs text-gray-700 font-bold">
+                            আপনার ছবি বা ভিডিও এখানে ড্র্যাগ করুন অথবা ক্লিক করে আপলোড করুন
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            সাপোর্টেড ফরম্যাটঃ JPG, PNG, MP4, WebM (সর্বোচ্চ ১৫ এমবি)
+                          </p>
+                        </div>
+                        
+                        <input 
+                          type="file" 
+                          accept="image/*,video/*" 
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleMediaFile(file);
+                          }} 
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                        />
+                      </div>
+
+                      {/* Beautiful previews */}
+                      {(newReviewPhoto || newReviewVideo) && (
+                        <div className="flex flex-wrap gap-3 mt-2.5 p-2 bg-slate-50 border border-gray-150 rounded-xl">
+                          {newReviewPhoto && (
+                            <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-300 shadow-sm animate-fadeIn">
+                              <img src={newReviewPhoto} alt="Attachment review preview" className="w-full h-full object-cover" />
+                              <button 
+                                type="button" 
+                                onClick={() => setNewReviewPhoto(null)}
+                                className="absolute top-1 right-1 w-5 h-5 bg-black/70 hover:bg-black text-white rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer transition active:scale-95"
+                                title="ছবি মুছুন"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                          {newReviewVideo && (
+                            <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-gray-300 shadow-sm bg-black flex items-center justify-center animate-fadeIn">
+                              <video src={newReviewVideo} className="w-full h-full object-cover" controls={false} muted />
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none bg-black/20">
+                                <span className="text-white text-xs bg-slate-900/80 px-1.5 py-0.5 rounded font-mono font-bold">VIDEO</span>
+                              </div>
+                              <button 
+                                type="button" 
+                                onClick={() => setNewReviewVideo(null)}
+                                className="absolute top-1 right-1 w-5 h-5 bg-black/70 hover:bg-black text-white rounded-full flex items-center justify-center text-[10px] font-bold cursor-pointer transition active:scale-95 z-10"
+                                title="ভিডিও মুছুন"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
-                    <button type="submit" className="bg-[#f85606] block w-full text-white text-xs font-bold py-2 rounded-lg transition">
+                    <button type="submit" className="bg-[#f85606] hover:bg-[#d63e00] block w-full text-white text-xs font-bold py-2.5 rounded-lg transition duration-200 shadow-md cursor-pointer">
                       সাবমিট রিভিউ (Publish)
                     </button>
                   </form>
@@ -1289,7 +1459,7 @@ export default function ProductDetailModal({
 
                 <div className="space-y-3">
                   {reviews.map((rev) => (
-                    <div key={rev.id} className="p-3.5 bg-white border border-gray-150 rounded-xl space-y-2 text-left">
+                    <div key={rev.id} className="p-3.5 bg-white border border-gray-150 rounded-xl space-y-2 text-left shadow-2xs">
                       <div className="flex items-center justify-between">
                         <span className="font-extrabold text-[#0f172a] text-xs sm:text-sm">{rev.name}</span>
                         <span className="text-[9px] text-[#bbb] font-mono">{rev.date}</span>
@@ -1300,11 +1470,26 @@ export default function ProductDetailModal({
                         ))}
                       </div>
                       <p className="text-slate-650 text-xs sm:text-sm leading-relaxed">{rev.comment}</p>
-                      {rev.image && (
-                        <div className="w-16 h-16 rounded overflow-hidden border border-gray-200 mt-2">
-                          <img src={rev.image} alt="User upload" className="w-full h-full object-cover" />
-                        </div>
-                      )}
+                      
+                      {/* Attachments rendering */}
+                      <div className="flex flex-wrap gap-2.5 mt-2">
+                        {rev.image && (
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg overflow-hidden border border-gray-200 shadow-3xs cursor-pointer group">
+                            <img src={rev.image} alt="User upload" className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                          </div>
+                        )}
+                        {rev.video && (
+                          <div className="w-36 h-20 sm:w-44 sm:h-24 rounded-lg overflow-hidden border border-gray-200 bg-black shadow-3xs">
+                            <video 
+                              src={rev.video} 
+                              controls 
+                              className="w-full h-full object-contain"
+                              preload="metadata"
+                              playsInline
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
