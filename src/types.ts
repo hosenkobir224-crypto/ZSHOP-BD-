@@ -17,6 +17,7 @@ export interface Product {
   colors?: string[];
   merchantPhone?: string;
   merchantShopName?: string;
+  merchantFacebookUrl?: string;
   isAffiliateReady?: boolean;
   affiliateCommission?: number;
   affCommission?: number;

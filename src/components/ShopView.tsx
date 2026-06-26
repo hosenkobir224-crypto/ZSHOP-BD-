@@ -33,6 +33,11 @@ export default function ShopView({
     });
   }, [products, shopName]);
 
+  const merchantFacebookUrl = useMemo(() => {
+    const found = shopProducts.find((p) => p.merchantFacebookUrl);
+    return found?.merchantFacebookUrl || "";
+  }, [shopProducts]);
+
   // Sort products
   const sortedProducts = useMemo(() => {
     const list = [...shopProducts];
@@ -119,13 +124,25 @@ export default function ShopView({
             </div>
 
             {/* Chat connection widget */}
-            <button 
-              onClick={() => alert(`${shopName} এর কাস্টমার রিলেশন হাব এর সাথে কানেক্ট করা হচ্ছে...`)}
-              className="px-5 py-3 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition active:scale-95 focus:outline-none flex items-center gap-2 shadow-md shrink-0 cursor-pointer"
-            >
-              <MessageSquare className="w-4 h-4 text-white" />
-              <span>Chat with Shop</span>
-            </button>
+            {merchantFacebookUrl ? (
+              <a 
+                href={merchantFacebookUrl.startsWith("http") ? merchantFacebookUrl : `https://${merchantFacebookUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-5 py-3 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition active:scale-95 focus:outline-none flex items-center gap-2 shadow-md shrink-0 cursor-pointer inline-flex items-center justify-center text-center"
+              >
+                <MessageSquare className="w-4 h-4 text-white" />
+                <span>Chat with Shop</span>
+              </a>
+            ) : (
+              <button 
+                onClick={() => alert(`${shopName} এর কাস্টমার রিলেশন হাব এর সাথে কানেক্ট করা হচ্ছে...`)}
+                className="px-5 py-3 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm rounded-xl transition active:scale-95 focus:outline-none flex items-center gap-2 shadow-md shrink-0 cursor-pointer"
+              >
+                <MessageSquare className="w-4 h-4 text-white" />
+                <span>Chat with Shop</span>
+              </button>
+            )}
           </div>
 
           {/* Stats overview bento directory */}

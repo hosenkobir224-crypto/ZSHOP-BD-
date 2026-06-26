@@ -56,6 +56,7 @@ export interface MerchantSession {
   shopName: string;
   avatar: string;
   address: string;
+  facebookUrl?: string;
 }
 
 export interface AffiliateSession {
@@ -117,6 +118,15 @@ export default function CustomerProfile({
 
   const [activeMerchant, setActiveMerchant] = useState<MerchantSession | null>(null);
   const [merchantTab, setMerchantTab] = useState<"summary" | "add" | "products" | "orders">("summary");
+  const [merchantFbUrl, setMerchantFbUrl] = useState("");
+  const [isSavingFbUrl, setIsSavingFbUrl] = useState(false);
+  const [fbUrlSuccessMsg, setFbUrlSuccessMsg] = useState("");
+
+  useEffect(() => {
+    if (activeMerchant) {
+      setMerchantFbUrl(activeMerchant.facebookUrl || "");
+    }
+  }, [activeMerchant]);
 
   // ==================== Affiliate Auth State ====================
   const [affName, setAffName] = useState("");
@@ -377,6 +387,45 @@ export default function CustomerProfile({
         setProdImage(reader.result as string);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUpdateMerchantFbUrl = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeMerchant) return;
+    setIsSavingFbUrl(true);
+    setFbUrlSuccessMsg("");
+    try {
+      const res = await fetch("/api/merchants/update-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: activeMerchant.phone,
+          facebookUrl: merchantFbUrl
+        })
+      });
+      const d = await res.json();
+      if (d.success) {
+        const updated = { ...activeMerchant, facebookUrl: merchantFbUrl };
+        setActiveMerchant(updated);
+        localStorage.setItem("zshop_bd_active_merchant_session_v1", JSON.stringify(updated));
+        setFbUrlSuccessMsg("ফেসবুক পেজের লিংক সফলভাবে সংরক্ষণ করা হয়েছে! 🎉");
+        // Reload products so they have the latest link
+        await fetchMerchantData(activeMerchant.phone);
+        // Dispatch window event so that other parts of the UI reload products too!
+        window.dispatchEvent(new Event("storage_orders_update"));
+        const channel = new BroadcastChannel("zshop_bd_realtime");
+        channel.postMessage("accounts_updated");
+        channel.close();
+        setTimeout(() => setFbUrlSuccessMsg(""), 4000);
+      } else {
+        alert(d.message || "সংরক্ষণ করতে ব্যর্থ হয়েছে।");
+      }
+    } catch (err) {
+      console.error("Error saving facebook link:", err);
+      alert("সার্ভার ত্রুটি, অনুগ্রহ করে আবার চেষ্টা করুন।");
+    } finally {
+      setIsSavingFbUrl(false);
     }
   };
 
@@ -2625,6 +2674,43 @@ export default function CustomerProfile({
                                 <span>Manage Categories</span>
                               </button>
                             </div>
+                          </div>
+
+                          {/* Shop Settings & Support Component */}
+                          <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
+                            <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest font-sans border-b border-gray-100 pb-3 flex items-center gap-2">
+                              <span>💬</span>
+                              <span>Chat & Support Settings</span>
+                            </h4>
+                            <form onSubmit={handleUpdateMerchantFbUrl} className="space-y-3">
+                              <div>
+                                <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">
+                                  Facebook Page URL / Link
+                                </label>
+                                <input 
+                                  type="text"
+                                  value={merchantFbUrl}
+                                  onChange={(e) => setMerchantFbUrl(e.target.value)}
+                                  placeholder="e.g. https://facebook.com/yourpage"
+                                  className="w-full px-3 py-2.5 bg-[#FAFAFA] border border-gray-200 rounded-xl focus:border-[#f85606] focus:outline-none text-xs font-sans text-slate-800"
+                                />
+                                <span className="text-[10px] text-gray-400 block mt-1.5 leading-relaxed">
+                                  প্রোডাক্ট পেইজের নিচে <strong>"Chat with Shop"</strong> বাটনে কাস্টমার ক্লিক করলে সরাসরি আপনার দেওয়া এই ফেসবুক পেজ লিংকে চলে যাবে।
+                                </span>
+                              </div>
+                              {fbUrlSuccessMsg && (
+                                <p className="text-xs text-emerald-650 font-bold bg-emerald-50/50 px-2.5 py-1.5 rounded-lg border border-emerald-100">
+                                  {fbUrlSuccessMsg}
+                                </p>
+                              )}
+                              <button 
+                                type="submit"
+                                disabled={isSavingFbUrl}
+                                className="w-full py-2.5 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-450 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-xs"
+                              >
+                                {isSavingFbUrl ? "সংরক্ষণ করা হচ্ছে..." : "সংরক্ষণ করুন (Save URL)"}
+                              </button>
+                            </form>
                           </div>
 
                         </div>

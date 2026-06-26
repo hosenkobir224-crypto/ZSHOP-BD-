@@ -90,7 +90,17 @@ app.get("/api/health", (req, res) => {
 // 1. Fetch All Unified Products (Default products + Merchant-uploaded products)
 app.get("/api/products", (req, res) => {
   const db = getDB();
-  res.json({ success: true, products: db.products || [] });
+  const merchants = db.merchants || [];
+  const products = (db.products || []).map((p: any) => {
+    if (p.merchantPhone) {
+      const m = merchants.find((m: any) => m.phone === p.merchantPhone);
+      if (m) {
+        return { ...p, merchantFacebookUrl: m.facebookUrl || "" };
+      }
+    }
+    return p;
+  });
+  res.json({ success: true, products });
 });
 
 // 2. Add New Merchant Product
@@ -372,7 +382,8 @@ app.post("/api/merchants/register", (req, res) => {
       phone: cleanPhone,
       password: password,
       address: address || "",
-      avatar: avatar || ""
+      avatar: avatar || "",
+      facebookUrl: ""
     };
 
     db.merchants = [newMerchant, ...(db.merchants || [])];
@@ -385,7 +396,8 @@ app.post("/api/merchants/register", (req, res) => {
         shopName: newMerchant.shopName,
         phone: newMerchant.phone,
         avatar: newMerchant.avatar,
-        address: newMerchant.address
+        address: newMerchant.address,
+        facebookUrl: ""
       }
     });
   } catch (err: any) {
@@ -421,7 +433,8 @@ app.post("/api/merchants/login", (req, res) => {
         shopName: foundMerchant.shopName,
         phone: foundMerchant.phone,
         avatar: foundMerchant.avatar || "",
-        address: foundMerchant.address || ""
+        address: foundMerchant.address || "",
+        facebookUrl: foundMerchant.facebookUrl || ""
       },
       products: merchantProducts
     });
@@ -672,6 +685,30 @@ app.post("/api/merchants/update-avatar", (req, res) => {
     merchant.avatar = avatar || "";
     saveDB(db);
     res.json({ success: true, avatar: merchant.avatar });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 10e-2. Merchant - Update Profile Settings (Facebook Page URL)
+app.post("/api/merchants/update-profile", (req, res) => {
+  try {
+    const { phone, facebookUrl } = req.body;
+    if (!phone) {
+      res.status(400).json({ success: false, message: "ফোন নম্বর আবশ্যক।" });
+      return;
+    }
+    const db = getDB();
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!db.merchants) db.merchants = [];
+    const merchant = db.merchants.find((m: any) => m.phone === cleanPhone);
+    if (!merchant) {
+      res.status(404).json({ success: false, message: "মার্চেন্ট খুঁজে পাওয়া যায়নি।" });
+      return;
+    }
+    merchant.facebookUrl = facebookUrl || "";
+    saveDB(db);
+    res.json({ success: true, merchant: { ...merchant, password: undefined } });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

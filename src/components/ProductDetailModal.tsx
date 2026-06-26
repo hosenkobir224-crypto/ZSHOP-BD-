@@ -1178,13 +1178,25 @@ export default function ProductDetailModal({
             </div>
 
             {/* Chat connection widget */}
-            <button 
-              onClick={() => alert(`${product?.merchantShopName || "ZSHOP BD"} এর কাস্টমার রিলেশন হাব এর সাথে কানেক্ট করা হচ্ছে...`)}
-              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-transform active:scale-95 focus:outline-none flex items-center gap-1.5 shadow-sm shrink-0"
-            >
-              <span>💬</span>
-              <span>Chat with Shop</span>
-            </button>
+            {product?.merchantFacebookUrl ? (
+              <a 
+                href={product.merchantFacebookUrl.startsWith("http") ? product.merchantFacebookUrl : `https://${product.merchantFacebookUrl}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-transform active:scale-95 focus:outline-none flex items-center gap-1.5 shadow-sm shrink-0 inline-flex"
+              >
+                <span>💬</span>
+                <span>Chat with Shop</span>
+              </a>
+            ) : (
+              <button 
+                onClick={() => alert(`${product?.merchantShopName || "ZSHOP BD"} এর কাস্টমার রিলেশন হাব এর সাথে কানেক্ট করা হচ্ছে...`)}
+                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-transform active:scale-95 focus:outline-none flex items-center gap-1.5 shadow-sm shrink-0"
+              >
+                <span>💬</span>
+                <span>Chat with Shop</span>
+              </button>
+            )}
           </div>
 
           {/* Stats overview bento directory */}
