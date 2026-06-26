@@ -388,17 +388,55 @@ export default function ProductDetailModal({
   // Compute alternative thumb snapshots to simulate a real multi-photo gallery
   const alternativeThumbnails = useMemo(() => {
     if (!product) return [];
+
+    // Check if the product has multiple images
+    if (product.images && product.images.length > 0) {
+      const thumbs = product.images.map((img, index) => ({
+        id: `thumb-${index + 1}`,
+        label: index === 0 ? "মূল ভিউ" : `ভিউ ${index + 1}`,
+        image: img,
+        styleClass: "object-cover",
+        video: undefined as string | undefined
+      }));
+
+      // Check if product has videos array
+      if (product.videos && product.videos.length > 0) {
+        product.videos.forEach((vid, index) => {
+          thumbs.push({
+            id: `thumb-video-${index}`,
+            label: `ভিডিও ${index + 1}`,
+            image: product.images?.[0] || product.image,
+            video: vid,
+            styleClass: "object-cover opacity-80"
+          });
+        });
+      } else if (product.video) {
+        thumbs.push({
+          id: "thumb-video",
+          label: "ভিডিও রিভিউ",
+          image: product.image,
+          video: product.video,
+          styleClass: "object-cover opacity-80"
+        });
+      }
+      return thumbs;
+    }
+
     const thumbs = [
-      { id: "thumb-1", label: "মূল ভিউ", image: product.image, styleClass: "object-cover" },
-      { id: "thumb-2", label: "ডিটেইল ভিউ", image: product.image, styleClass: "object-cover scale-150 origin-center" },
-      { id: "thumb-3", label: "স্টাইলিশ ফ্রন্ট", image: product.image, styleClass: "object-cover brightness-[1.04] contrast-105" },
-      { id: "thumb-4", label: "প্যাকিং সিল", image: product.image, styleClass: "object-cover brightness-95 sepia-[0.1]" }
+      { id: "thumb-1", label: "মূল ভিউ", image: product.image, styleClass: "object-cover", video: undefined as string | undefined },
+      { id: "thumb-2", label: "ডিটেইল ভিউ", image: product.image, styleClass: "object-cover scale-150 origin-center", video: undefined as string | undefined },
+      { id: "thumb-3", label: "স্টাইলিশ ফ্রন্ট", image: product.image, styleClass: "object-cover brightness-[1.04] contrast-105", video: undefined as string | undefined },
+      { id: "thumb-4", label: "প্যাকিং সিল", image: product.image, styleClass: "object-cover brightness-95 sepia-[0.1]", video: undefined as string | undefined }
     ];
     if (product.video) {
-      thumbs.push({ id: "thumb-video", label: "ভিডিও রিভিউ", image: product.image, styleClass: "object-cover opacity-80" });
+      thumbs.push({ id: "thumb-video", label: "ভিডিও রিভিউ", image: product.image, video: product.video, styleClass: "object-cover opacity-80" });
     }
     return thumbs;
   }, [product]);
+
+  const selectedThumb = useMemo(() => {
+    return alternativeThumbnails.find(t => t.id === activeThumbId);
+  }, [alternativeThumbnails, activeThumbId]);
 
   // Helper to get deterministic sold count matches style
   const getProductSoldCount = (productId: string) => {
@@ -777,9 +815,10 @@ export default function ProductDetailModal({
             
             {/* Primary Gallery viewport */}
             <div className="relative aspect-square w-full rounded-xl bg-slate-50 border border-gray-100 overflow-hidden select-none shadow-3xs group">
-              {activeThumbId === "thumb-video" && product.video ? (
+              {selectedThumb && selectedThumb.video ? (
                 <video
-                  src={product.video}
+                  key={selectedThumb.id}
+                  src={selectedThumb.video}
                   controls
                   autoPlay
                   className="w-full h-full object-contain bg-black"
@@ -814,7 +853,7 @@ export default function ProductDetailModal({
                   className={`w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-all p-0.5 relative ${activeThumbId === thumb.id ? "border-[#fdb900] shadow-sm scale-102" : "border-gray-200 hover:border-gray-300"}`}
                 >
                   <img src={thumb.image} alt={thumb.label} referrerPolicy="no-referrer" className={`w-full h-full object-cover ${thumb.styleClass}`} />
-                  {thumb.id === "thumb-video" && (
+                  {thumb.id.startsWith("thumb-video") && (
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <span className="text-white text-[9px] bg-[#f85606] px-1 py-0.5 rounded-xs font-black tracking-wide scale-90">🎥 PLAY</span>
                     </div>

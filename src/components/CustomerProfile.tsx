@@ -150,6 +150,8 @@ export default function CustomerProfile({
   const [prodOriginalPrice, setProdOriginalPrice] = useState("");
   const [prodCategory, setProdCategory] = useState("clothing");
   const [prodImage, setProdImage] = useState("");
+  const [prodImages, setProdImages] = useState<string[]>([]);
+  const [prodVideos, setProdVideos] = useState<string[]>([]);
   const [prodImageSource, setProdImageSource] = useState<"link" | "upload">("link");
   const [prodSizes, setProdSizes] = useState("M, L, XL");
   const [prodColors, setProdColors] = useState("Black, Blue");
@@ -385,8 +387,32 @@ export default function CustomerProfile({
       const reader = new FileReader();
       reader.onloadend = () => {
         setProdImage(reader.result as string);
+        setProdImages([reader.result as string]);
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  // Product Multi Photo & Video Upload Handler (Merchant panel)
+  const handleProductMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      Array.from(files).forEach((file: File) => {
+        if (file.size > 15 * 1024 * 1024) {
+          alert(`"${file.name}" ফাইল সাইজ অনেক বড়! ১৫ মেগাবাইটের নিচের ফাইল আপলোড করুন।`);
+          return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const resultStr = reader.result as string;
+          if (file.type.startsWith("image/")) {
+            setProdImages((prev) => [...prev, resultStr]);
+          } else if (file.type.startsWith("video/")) {
+            setProdVideos((prev) => [...prev, resultStr]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -771,12 +797,19 @@ export default function CustomerProfile({
         ? `${Math.round(((parseFloat(prodOriginalPrice) - parseFloat(prodPrice)) / parseFloat(prodOriginalPrice)) * 100)}% OFF`
         : "";
 
+      const finalImages = prodImages.length > 0 ? prodImages : (prodImage ? [prodImage] : []);
+      const primaryImage = finalImages[0] || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600";
+      const primaryVideo = prodVideos[0] || undefined;
+
       const productPayload = {
         title: prodTitle.trim(),
         price: parseFloat(prodPrice),
         originalPrice: prodOriginalPrice ? parseFloat(prodOriginalPrice) : undefined,
         discountTag: discountPct || undefined,
-        image: prodImage || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=600",
+        image: primaryImage,
+        images: finalImages,
+        video: primaryVideo,
+        videos: prodVideos,
         category: prodCategory,
         description: prodDescription.trim() || `${prodTitle}. Verified Seller Direct authenticated product on ZSHOP BD.`,
         sizes: prodSizes ? prodSizes.split(",").map(s => s.trim()) : [],
@@ -809,6 +842,8 @@ export default function CustomerProfile({
         setProdPrice("");
         setProdOriginalPrice("");
         setProdImage("");
+        setProdImages([]);
+        setProdVideos([]);
         setProdDescription("");
         setProdIsAffiliateReady(true);
         setProdAffiliateCommission("100");
@@ -2956,39 +2991,120 @@ export default function CustomerProfile({
                         </div>
                       </div>
 
-                      {/* Photo selector (Url vs File) */}
-                      <div className="space-y-2">
-                        <label className="block text-[10px] text-gray-500 font-mono tracking-wider uppercase">পণ্যর ছবি *</label>
-                        <div className="flex border border-gray-200 rounded-lg overflow-hidden shrink-0">
-                          <button 
-                            type="button" onClick={() => setProdImageSource("link")}
-                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "link" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
-                          >
-                            ছবি লিংক দিন
-                          </button>
-                          <button 
-                            type="button" onClick={() => setProdImageSource("upload")}
-                            className={`flex-1 text-center py-1.5 text-[10px] font-bold ${prodImageSource === "upload" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
-                          >
-                            গ্যালারি থেকে ফটো আপলোড
-                          </button>
+                      {/* Photo & Video selector (Url vs File) with multi support */}
+                      <div className="space-y-3 p-3 bg-slate-50 border border-gray-150 rounded-xl">
+                        <div className="flex items-center justify-between">
+                          <label className="block text-[11px] font-bold text-gray-700 uppercase">পণ্যর ছবি ও ভিডিও সমূহ (Multiple Photos & Videos)</label>
+                          <div className="flex border border-gray-200 rounded-lg overflow-hidden shrink-0">
+                            <button 
+                              type="button" onClick={() => setProdImageSource("link")}
+                              className={`px-3 py-1 text-[10px] font-bold transition-all ${prodImageSource === "link" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
+                            >
+                              লিংক দিন (URLs)
+                            </button>
+                            <button 
+                              type="button" onClick={() => setProdImageSource("upload")}
+                              className={`px-3 py-1 text-[10px] font-bold transition-all ${prodImageSource === "upload" ? "bg-rose-600 text-white" : "bg-gray-100 text-gray-500"}`}
+                            >
+                              গ্যালারি থেকে আপলোড
+                            </button>
+                          </div>
                         </div>
 
                         {prodImageSource === "link" ? (
-                          <input 
-                            type="url" placeholder="https://images.unsplash.com/photo-..."
-                            value={prodImage.startsWith("data") ? "" : prodImage} onChange={e => setProdImage(e.target.value)}
-                            className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono"
-                          />
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-[9px] text-gray-400 font-mono mb-1">ছবির লিংক সমূহ (কমা দিয়ে একাধিক লিংক দিতে পারেন)</label>
+                              <textarea 
+                                rows={2}
+                                placeholder="https://example.com/img1.jpg, https://example.com/img2.jpg"
+                                value={prodImages.filter(img => !img.startsWith("data:")).join(", ")}
+                                onChange={e => {
+                                  const list = e.target.value.split(",").map(url => url.trim()).filter(Boolean);
+                                  setProdImages(list);
+                                  if (list[0]) setProdImage(list[0]);
+                                }}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono text-[10px]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[9px] text-gray-400 font-mono mb-1">ভিডিও লিংক সমূহ (ঐচ্ছিক, কমা দিয়ে একাধিক লিংক দিতে পারেন)</label>
+                              <textarea 
+                                rows={2}
+                                placeholder="https://example.com/video1.mp4, https://example.com/video2.mp4"
+                                value={prodVideos.filter(vid => !vid.startsWith("data:")).join(", ")}
+                                onChange={e => {
+                                  const list = e.target.value.split(",").map(url => url.trim()).filter(Boolean);
+                                  setProdVideos(list);
+                                }}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 focus:border-rose-500 rounded-lg focus:outline-none font-mono text-[10px]"
+                              />
+                            </div>
+                          </div>
                         ) : (
-                          <div className="flex flex-col md:flex-row items-center gap-3 p-3 bg-slate-50 border border-gray-250 rounded-xl">
-                            <input 
-                              type="file" accept="image/*" onChange={handleProductPhotoUpload}
-                              className="text-xs text-gray-555"
-                            />
-                            {prodImage && (
-                              <img src={prodImage} alt="sample" className="w-12 h-12 object-cover bg-white border rounded shadow shrink-0" />
-                            )}
+                          <div className="space-y-3">
+                            <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-250 rounded-xl p-4 bg-white hover:bg-rose-50/10 transition relative cursor-pointer group">
+                              <input 
+                                type="file" 
+                                accept="image/*,video/*" 
+                                multiple 
+                                onChange={handleProductMediaUpload}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <div className="text-center pointer-events-none">
+                                <span className="text-xl">📸</span>
+                                <p className="text-xs font-bold text-gray-600 mt-1">ক্লিক করে আপনার গ্যালারি থেকে ছবি ও ভিডিও সিলেক্ট করুন</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">একসাথে একাধিক ছবি অথবা ভিডিও আপলোড করতে পারবেন (সর্বোচ্চ ১৫ মেগাবাইট)</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Media Previews Grid */}
+                        {(prodImages.length > 0 || prodVideos.length > 0) && (
+                          <div className="space-y-2 pt-2 border-t border-gray-200/60">
+                            <h5 className="text-[10px] font-bold text-slate-700">যুক্ত করা মিডিয়া ফাইলসমূহ ({prodImages.length} ছবি, {prodVideos.length} ভিডিও):</h5>
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                              {/* Image previews */}
+                              {prodImages.map((img, idx) => (
+                                <div key={`img-prev-${idx}`} className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden group bg-white shadow-3xs">
+                                  <img src={img} alt="preview" className="w-full h-full object-cover animate-fade-in" />
+                                  <span className="absolute top-0.5 left-0.5 bg-black/60 text-white text-[8px] px-1 rounded-sm font-bold">Image {idx+1}</span>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      const updated = prodImages.filter((_, i) => i !== idx);
+                                      setProdImages(updated);
+                                      if (idx === 0) {
+                                        setProdImage(updated[0] || "");
+                                      }
+                                    }}
+                                    className="absolute top-0.5 right-0.5 w-4.5 h-4.5 bg-rose-600/95 hover:bg-rose-750 text-white rounded-full flex items-center justify-center text-[10px] font-black cursor-pointer shadow-xs active:scale-90 transition-transform"
+                                    title="ছবিটি মুছুন"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+
+                              {/* Video previews */}
+                              {prodVideos.map((vid, idx) => (
+                                <div key={`vid-prev-${idx}`} className="relative aspect-square border border-gray-200 rounded-lg overflow-hidden group bg-black shadow-3xs">
+                                  <video src={vid} className="w-full h-full object-cover opacity-80" />
+                                  <span className="absolute top-0.5 left-0.5 bg-black/60 text-white text-[8px] px-1 rounded-sm font-bold">🎥 Video {idx+1}</span>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      setProdVideos(prodVideos.filter((_, i) => i !== idx));
+                                    }}
+                                    className="absolute top-0.5 right-0.5 w-4.5 h-4.5 bg-rose-600/95 hover:bg-rose-750 text-white rounded-full flex items-center justify-center text-[10px] font-black cursor-pointer shadow-xs active:scale-90 transition-transform"
+                                    title="ভিডিওটি মুছুন"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
