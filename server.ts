@@ -22,7 +22,16 @@ function getDB() {
         customers: [],
         merchants: [],
         affiliates: [],
-        visits: { total: 0, daily: {} }
+        visits: { total: 0, daily: {} },
+        settings: {
+          logoText: "ZSHOP",
+          logoSuffix: "BD",
+          logoSlogan: "Retail Revolution",
+          logoType: "text",
+          logoImage: "",
+          primaryColor: "#f85606",
+          primaryFaintColor: "#fff2ed"
+        }
       };
       fs.writeFileSync(DB_FILE, JSON.stringify(defaultState, null, 2));
       return defaultState;
@@ -37,6 +46,17 @@ function getDB() {
     }
     if (!parsed.productViews) {
       parsed.productViews = {};
+    }
+    if (!parsed.settings) {
+      parsed.settings = {
+        logoText: "ZSHOP",
+        logoSuffix: "BD",
+        logoSlogan: "Retail Revolution",
+        logoType: "text",
+        logoImage: "",
+        primaryColor: "#f85606",
+        primaryFaintColor: "#fff2ed"
+      };
     }
     return parsed;
   } catch (error) {
@@ -186,6 +206,36 @@ app.post("/api/admin/products/sync", (req, res) => {
     db.products = products;
     saveDB(db);
     res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 4.6. Settings - Fetch website branding settings
+app.get("/api/settings", (req, res) => {
+  try {
+    const db = getDB();
+    res.json({ success: true, settings: db.settings });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 4.7. Settings - Update website branding settings
+app.post("/api/settings/update", (req, res) => {
+  try {
+    const { settings } = req.body;
+    if (!settings) {
+      res.status(400).json({ success: false, message: "Invalid settings payload." });
+      return;
+    }
+    const db = getDB();
+    db.settings = {
+      ...(db.settings || {}),
+      ...settings
+    };
+    saveDB(db);
+    res.json({ success: true, settings: db.settings });
   } catch (err: any) {
     res.status(500).json({ success: false, message: err.message });
   }

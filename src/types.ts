@@ -76,3 +76,13 @@ export interface Order {
   paymentDetails?: string;
 }
 
+export interface BrandingSettings {
+  logoText: string;
+  logoSuffix: string;
+  logoSlogan: string;
+  logoType: "text" | "image";
+  logoImage: string;
+  primaryColor: string;
+  primaryFaintColor: string;
+}
+

@@ -416,6 +416,14 @@ export default function CustomerProfile({
       }
 
       setRegSuccess(true);
+      try {
+        window.dispatchEvent(new Event("zshop_bd_accounts_updated"));
+        const channel = new BroadcastChannel("zshop_bd_realtime");
+        channel.postMessage("accounts_updated");
+        channel.close();
+      } catch (err) {
+        console.error("Failed to notify accounts update:", err);
+      }
       setTimeout(() => {
         setRegSuccess(false);
         setMode("login");
@@ -515,6 +523,14 @@ export default function CustomerProfile({
       }
 
       setMerchSuccess(true);
+      try {
+        window.dispatchEvent(new Event("zshop_bd_accounts_updated"));
+        const channel = new BroadcastChannel("zshop_bd_realtime");
+        channel.postMessage("accounts_updated");
+        channel.close();
+      } catch (err) {
+        console.error("Failed to notify accounts update:", err);
+      }
       setTimeout(() => {
         setMerchSuccess(false);
         setMode("login");
@@ -601,6 +617,14 @@ export default function CustomerProfile({
       }
 
       setAffSuccess(true);
+      try {
+        window.dispatchEvent(new Event("zshop_bd_accounts_updated"));
+        const channel = new BroadcastChannel("zshop_bd_realtime");
+        channel.postMessage("accounts_updated");
+        channel.close();
+      } catch (err) {
+        console.error("Failed to notify accounts update:", err);
+      }
       setTimeout(() => {
         setAffSuccess(false);
         setMode("login");

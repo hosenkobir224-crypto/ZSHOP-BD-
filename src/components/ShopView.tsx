@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ChevronRight, ArrowLeft, MessageSquare, Star, SlidersHorizontal, Check } from "lucide-react";
-import { Product } from "../types";
+import { Product, BrandingSettings } from "../types";
 import ProductCard from "./ProductCard";
 
 interface ShopViewProps {
@@ -10,6 +10,7 @@ interface ShopViewProps {
   onAddToCart: (product: Product) => void;
   onOrderNow?: (product: Product) => void;
   onOpenQuickView: (product: Product) => void;
+  branding?: BrandingSettings;
 }
 
 export default function ShopView({
@@ -19,6 +20,7 @@ export default function ShopView({
   onAddToCart,
   onOrderNow,
   onOpenQuickView,
+  branding,
 }: ShopViewProps) {
   const [sortBy, setSortBy] = useState<string>("popular");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -70,12 +72,18 @@ export default function ShopView({
               <ArrowLeft className="w-4 h-4" />
             </button>
             <div className="flex items-center gap-2 select-none">
-              <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-xs">
-                Z
-              </div>
-              <span className="font-display font-extrabold text-lg text-slate-950 leading-none">
-                ZSHOP<span className="text-amber-500 font-semibold text-sm ml-0.5">BD</span>
-              </span>
+              {branding?.logoType === "image" && branding?.logoImage ? (
+                <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-8 object-contain" />
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-xs">
+                    {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
+                  </div>
+                  <span className="font-display font-extrabold text-lg text-slate-950 leading-none">
+                    {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-sm ml-0.5">{branding?.logoSuffix || "BD"}</span>
+                  </span>
+                </>
+              )}
             </div>
           </div>
 

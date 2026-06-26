@@ -28,9 +28,10 @@ import {
   ExternalLink,
   Users,
   Activity,
-  BarChart2
+  BarChart2,
+  Settings
 } from "lucide-react";
-import { Product, Order, OrderItem, Promotion } from "../types";
+import { Product, Order, OrderItem, Promotion, BrandingSettings } from "../types";
 import { PROMOTIONS } from "../data";
 import { 
   getPixelConfig, 
@@ -46,13 +47,15 @@ interface AdminPanelProps {
   onClose: () => void;
   products: Product[];
   onUpdateProducts: (updatedProducts: Product[]) => void;
+  branding?: BrandingSettings;
 }
 
 export default function AdminPanel({
   isOpen,
   onClose,
   products,
-  onUpdateProducts
+  onUpdateProducts,
+  branding,
 }: AdminPanelProps) {
   // Authentication active states
   const [isLogged, setIsLogged] = useState<boolean>(() => {
@@ -319,6 +322,87 @@ export default function AdminPanel({
     }
   };
 
+  // Website branding states
+  const [logoText, setLogoText] = useState(branding?.logoText || "ZSHOP");
+  const [logoSuffix, setLogoSuffix] = useState(branding?.logoSuffix || "BD");
+  const [logoSlogan, setLogoSlogan] = useState(branding?.logoSlogan || "Retail Revolution");
+  const [logoType, setLogoType] = useState<"text" | "image">(branding?.logoType || "text");
+  const [logoImage, setLogoImage] = useState(branding?.logoImage || "");
+  const [primaryColor, setPrimaryColor] = useState(branding?.primaryColor || "#f85606");
+  const [saveBrandingSuccess, setSaveBrandingSuccess] = useState("");
+  const [isSavingBranding, setIsSavingBranding] = useState(false);
+
+  useEffect(() => {
+    if (branding) {
+      setLogoText(branding.logoText || "ZSHOP");
+      setLogoSuffix(branding.logoSuffix || "BD");
+      setLogoSlogan(branding.logoSlogan || "Retail Revolution");
+      setLogoType(branding.logoType || "text");
+      setLogoImage(branding.logoImage || "");
+      setPrimaryColor(branding.primaryColor || "#f85606");
+    }
+  }, [branding]);
+
+  const handleLogoImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 1 * 1024 * 1024) {
+        alert("লোগো ফাইলের সাইজ অনেক বড়! দয়া করে ১ মেগাবাইটের চেয়ে ছোট ইমেজ ফাইল আপলোড করুন।");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setLogoImage(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getFaintColorLocal = (hex: string): string => {
+    hex = hex.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, 0.08)`;
+  };
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingBranding(true);
+    setSaveBrandingSuccess("");
+    try {
+      const res = await fetch("/api/settings/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          settings: {
+            logoText,
+            logoSuffix,
+            logoSlogan,
+            logoType,
+            logoImage,
+            primaryColor,
+            primaryFaintColor: getFaintColorLocal(primaryColor)
+          }
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSaveBrandingSuccess("ওয়েবসাইট ব্র্যান্ডিং ও কালার স্কিম সফলভাবে আপডেট করা হয়েছে!");
+        window.dispatchEvent(new Event("zshop_bd_branding_updated"));
+        setTimeout(() => setSaveBrandingSuccess(""), 4000);
+      } else {
+        alert("ব্র্যান্ডিং আপডেট করতে ব্যর্থ হয়েছে: " + data.message);
+      }
+    } catch (err: any) {
+      alert("সার্ভার ত্রুটি: " + err.message);
+    } finally {
+      setIsSavingBranding(false);
+    }
+  };
+
   // Inline edit price state
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [editPriceVal, setEditPriceVal] = useState("");
@@ -389,18 +473,43 @@ export default function AdminPanel({
   }, [activeTab, isOpen]);
 
   useEffect(() => {
-    // Listen for custom trigger when customer places order in real-time
+    // Listen for custom trigger when customer places order or accounts update in real-time
     const handleStorageUpdate = () => {
       loadOrders();
+    };
+    const handleAccountsUpdate = () => {
+      loadAccounts();
     };
     const handleLogsUpdate = () => {
       setPixelLogs(getPixelAuditLogs());
     };
+
     window.addEventListener("storage_orders_update", handleStorageUpdate);
+    window.addEventListener("zshop_bd_accounts_updated", handleAccountsUpdate);
     window.addEventListener("zshop_bd_pixel_logs_updated", handleLogsUpdate);
+
+    // Modern BroadcastChannel for cross-tab and iframe communication
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel("zshop_bd_realtime");
+      channel.onmessage = (event) => {
+        if (event.data === "accounts_updated") {
+          loadAccounts();
+        } else if (event.data === "orders_updated") {
+          loadOrders();
+        }
+      };
+    } catch (err) {
+      console.error("BroadcastChannel initialization skipped/failed:", err);
+    }
+
     return () => {
       window.removeEventListener("storage_orders_update", handleStorageUpdate);
+      window.removeEventListener("zshop_bd_accounts_updated", handleAccountsUpdate);
       window.removeEventListener("zshop_bd_pixel_logs_updated", handleLogsUpdate);
+      if (channel) {
+        channel.close();
+      }
     };
   }, []);
 
@@ -776,7 +885,8 @@ export default function AdminPanel({
                 { id: "add-product", label: "নতুন পণ্য যোগ করুন", icon: <Plus className="w-3.5 h-3.5" /> },
                 { id: "banners", label: "ব্যানার এডিটর 🎨", icon: <Image className="w-3.5 h-3.5" /> },
                 { id: "pixel", label: "Meta Pixel / Ads ⚙️", icon: <Layers className="w-3.5 h-3.5" /> },
-                { id: "accounts", label: `ইউজার অ্যাকাউন্টস (${accounts.customers.length + accounts.merchants.length + accounts.affiliates.length}) 👥`, icon: <Users className="w-3.5 h-3.5" /> }
+                { id: "accounts", label: `ইউজার অ্যাকাউন্টস (${accounts.customers.length + accounts.merchants.length + accounts.affiliates.length}) 👥`, icon: <Users className="w-3.5 h-3.5" /> },
+                { id: "settings", label: "ওয়েবসাইট ব্র্যান্ডিং 🛠️", icon: <Settings className="w-3.5 h-3.5" /> }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -2475,6 +2585,255 @@ export default function AdminPanel({
                   </div>
                 );
               })()}
+
+              {/* TAB 8: WEBSITE BRANDING SETTINGS */}
+              {activeTab === "settings" && (
+                <div className="space-y-6" id="admin-branding-settings-view">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                      <h3 className="text-sm font-display font-bold text-white uppercase tracking-wider">
+                        ওয়েবসাইট ব্র্যান্ডিং ও কালার সেটিং (Brand Identity Control)
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-1">
+                        এখানে আপনি ওয়েবসাইটের নাম, লোগো, স্লোগান এবং থিম কালার যখন তখন পরিবর্তন করতে পারবেন।
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSaveBranding} className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left">
+                    {/* Left Column: Form Controls */}
+                    <div className="lg:col-span-8 space-y-6 bg-slate-900/50 p-6 rounded-2xl border border-slate-800">
+                      
+                      {/* Logo Rendering Mode Selection */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-300 block">লোগোর ধরন (Logo Display Type)</label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            type="button"
+                            onClick={() => setLogoType("text")}
+                            className={`py-3 px-4 rounded-xl border font-semibold text-xs flex flex-col items-center gap-2 transition cursor-pointer ${logoType === "text" ? "border-amber-400 bg-amber-400/10 text-white" : "border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white"}`}
+                          >
+                            <span className="font-bold text-base">ZSHOP BD</span>
+                            <span>টেক্সট লোগো (ডিফল্ট)</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setLogoType("image")}
+                            className={`py-3 px-4 rounded-xl border font-semibold text-xs flex flex-col items-center gap-2 transition cursor-pointer ${logoType === "image" ? "border-amber-400 bg-amber-400/10 text-white" : "border-slate-800 bg-slate-950/40 text-slate-400 hover:text-white"}`}
+                          >
+                            <Image className="w-5 h-5 text-amber-500" />
+                            <span>কাস্টম ইমেজ লোগো</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {logoType === "text" ? (
+                        /* Text Logo Configuration Grid */
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-slate-300 block">লোগো টেক্সট (Logo Title)</label>
+                            <input
+                              type="text"
+                              value={logoText}
+                              onChange={(e) => setLogoText(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                              placeholder="যেমন: ZSHOP"
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-slate-300 block">লোগো সাফিক্স (Logo Suffix)</label>
+                            <input
+                              type="text"
+                              value={logoSuffix}
+                              onChange={(e) => setLogoSuffix(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                              placeholder="যেমন: BD"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        /* Image Logo File Upload / URL Configuration */
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-slate-300 block">কাস্টম ইমেজ লোগো আপলোড করুন</label>
+                            <div className="border-2 border-dashed border-slate-800 rounded-xl p-4 bg-slate-950/40 text-center relative hover:border-amber-500/50 transition">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleLogoImageUpload}
+                                className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                              />
+                              <div className="space-y-1.5 pointer-events-none">
+                                <Image className="w-8 h-8 text-slate-500 mx-auto" />
+                                <p className="text-xs text-slate-300 font-bold">লোগো ফাইল ড্রপ করুন অথবা ব্রাউজ করুন</p>
+                                <p className="text-[10px] text-slate-500 font-mono">PNG, JPG অথবা WebP (১ মেগাবাইটের নিচে)</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold text-slate-300 block">অথবা লোগো ইমেজ লিঙ্ক (Direct URL)</label>
+                            <input
+                              type="url"
+                              value={logoImage}
+                              onChange={(e) => setLogoImage(e.target.value)}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-400 font-mono"
+                              placeholder="https://example.com/logo.png"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Slogan Text Option */}
+                      <div className="space-y-2">
+                        <label className="text-xs font-semibold text-slate-300 block">ওয়েবসাইট স্লোগান (Website Slogan)</label>
+                        <input
+                          type="text"
+                          value={logoSlogan}
+                          onChange={(e) => setLogoSlogan(e.target.value)}
+                          className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-amber-400"
+                          placeholder="যেমন: Retail Revolution"
+                        />
+                      </div>
+
+                      {/* Theme Colors Panel */}
+                      <div className="p-4 bg-slate-950/40 rounded-xl border border-slate-800 space-y-4">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                          ওয়েবসাইট থিম কালার কনফিগারেশন
+                        </h4>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-slate-400 block">মূল থিম কালার (Accent Color)</label>
+                            <div className="flex gap-2">
+                              <input
+                                type="color"
+                                value={primaryColor}
+                                onChange={(e) => setPrimaryColor(e.target.value)}
+                                className="w-12 h-10 bg-transparent border-0 rounded-lg cursor-pointer shrink-0"
+                              />
+                              <input
+                                type="text"
+                                value={primaryColor}
+                                onChange={(e) => setPrimaryColor(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-amber-400 font-mono uppercase"
+                                placeholder="#f85606"
+                                required
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Built-in Preset Color Options */}
+                          <div className="space-y-2">
+                            <label className="text-[11px] font-semibold text-slate-400 block">জনপ্রিয় কালার প্রিসেটসমূহ</label>
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              {[
+                                { name: "Daraz Orange", color: "#f85606" },
+                                { name: "Royal Blue", color: "#1e40af" },
+                                { name: "Emerald", color: "#10b981" },
+                                { name: "Rose Pink", color: "#e11d48" },
+                                { name: "Violet", color: "#6d28d9" },
+                                { name: "Sunset Yellow", color: "#eab308" }
+                              ].map((p) => (
+                                <button
+                                  key={p.color}
+                                  type="button"
+                                  onClick={() => setPrimaryColor(p.color)}
+                                  className="w-6 h-6 rounded-full border border-slate-700 transition transform hover:scale-110 cursor-pointer"
+                                  style={{ backgroundColor: p.color }}
+                                  title={p.name}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {saveBrandingSuccess && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-xs text-emerald-400 font-semibold animate-fadeIn">
+                          {saveBrandingSuccess}
+                        </div>
+                      )}
+
+                      {/* Action Button */}
+                      <div className="pt-2">
+                        <button
+                          type="submit"
+                          disabled={isSavingBranding}
+                          className="w-full bg-amber-400 hover:bg-amber-500 disabled:opacity-50 text-slate-950 font-bold py-3 px-6 rounded-xl text-xs transition-all duration-200 shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          {isSavingBranding ? "সেভ করা হচ্ছে..." : "ব্র্যান্ডিং ও কালার সেভ করুন 💾"}
+                        </button>
+                      </div>
+
+                    </div>
+
+                    {/* Right Column: Real-time Live Preview */}
+                    <div className="lg:col-span-4 space-y-4">
+                      <div className="sticky top-6 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5">
+                        <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
+                          লাইভ প্রিভিউ (Live Preview)
+                        </h4>
+                        
+                        {/* Mock Navbar Preview */}
+                        <div className="bg-white rounded-xl p-3 shadow-md border border-gray-150 space-y-3 text-slate-900 text-left">
+                          <span className="text-[9px] text-gray-400 font-mono uppercase block">মক নেভিগেশন বার</span>
+                          
+                          <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                            <div className="flex items-center gap-1.5">
+                              {logoType === "image" && logoImage ? (
+                                <img src={logoImage} alt="Preview" className="h-6 object-contain" />
+                              ) : (
+                                <>
+                                  <div className="w-6 h-6 bg-slate-950 text-white rounded-md flex items-center justify-center font-bold text-xs select-none">
+                                    {(logoText || "Z")[0]?.toUpperCase()}
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-extrabold text-xs text-slate-950 leading-none">
+                                      {logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-[10px] ml-0.5">{logoSuffix || "BD"}</span>
+                                    </span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                            
+                            <div className="w-16 h-1 bg-gray-200 rounded"></div>
+                          </div>
+
+                          {/* Mock CTA Preview */}
+                          <div className="space-y-1.5">
+                            <span className="text-[9px] text-gray-400 font-mono uppercase block">মূল অ্যাকশন বোতাম</span>
+                            <div
+                              className="py-2 rounded-lg text-center text-white font-bold text-[10px] shadow-sm select-none"
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              অর্ডার করুন (৳৪৯৯)
+                            </div>
+                          </div>
+
+                          {/* Slogan Line */}
+                          <div className="pt-1 text-center">
+                            <span className="text-[8px] text-gray-500 font-mono font-medium block truncate">
+                              {logoSlogan || "Retail Revolution"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Theme Palette Details Info */}
+                        <div className="mt-4 p-3 bg-slate-950/50 rounded-xl border border-slate-850 text-[11px] text-slate-400 leading-relaxed text-left space-y-1">
+                          <p><strong className="text-slate-300">Accent Hex:</strong> <span className="font-mono text-amber-400">{primaryColor}</span></p>
+                          <p><strong className="text-slate-300">Faint Overlay:</strong> <span className="font-mono text-amber-400">{getFaintColorLocal(primaryColor)}</span></p>
+                          <p className="text-[10px] text-slate-500 pt-1 border-t border-slate-850 mt-1">
+                            *সেভ বাটনে চাপার সাথে সাথে ওয়েবসাইটের সমস্ত অ্যাকসেন্ট কালার এবং লোগো অটোমেটিক্যালি আপডেট হয়ে যাবে।
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           </div>
         )}

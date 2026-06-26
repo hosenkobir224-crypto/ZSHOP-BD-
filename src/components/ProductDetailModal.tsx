@@ -32,7 +32,7 @@ import {
   User,
   Search
 } from "lucide-react";
-import { Product } from "../types";
+import { Product, BrandingSettings } from "../types";
 import { PRODUCTS } from "../data";
 
 interface Review {
@@ -63,6 +63,7 @@ interface ProductDetailModalProps {
   onSelectProduct?: (product: Product) => void; // Support swapping active product
   setSearchQuery?: (query: string) => void;
   onViewShop?: (shopName: string) => void;
+  branding?: BrandingSettings;
 }
 
 function getCategorySpecs(category: string) {
@@ -100,6 +101,7 @@ export default function ProductDetailModal({
   onSelectProduct,
   setSearchQuery,
   onViewShop,
+  branding,
 }: ProductDetailModalProps) {
   // Option Selectors
   const [selectedColor, setSelectedColor] = useState<string>("");
@@ -632,17 +634,23 @@ export default function ProductDetailModal({
 
             {/* Logo Brand Frame */}
             <div className="flex items-center gap-1.5 cursor-pointer selection:bg-transparent" onClick={onClose}>
-              <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-sm">
-                Z
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-extrabold text-sm tracking-normal text-slate-950 leading-none">
-                  ZSHOP<span className="text-amber-500 font-semibold text-xs ml-0.5">BD</span>
-                </span>
-                <span className="text-[7px] tracking-[0.15em] uppercase text-gray-400 font-mono mt-0.5 font-bold">
-                  Retail Revolution
-                </span>
-              </div>
+              {branding?.logoType === "image" && branding?.logoImage ? (
+                <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-8 object-contain" />
+              ) : (
+                <>
+                  <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-sm">
+                    {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-display font-extrabold text-sm tracking-normal text-slate-950 leading-none">
+                      {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-xs ml-0.5">{branding?.logoSuffix || "BD"}</span>
+                    </span>
+                    <span className="text-[7px] tracking-[0.15em] uppercase text-gray-400 font-mono mt-0.5 font-bold">
+                      {branding?.logoSlogan || "Retail Revolution"}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

@@ -28,11 +28,74 @@ import CustomerProfile from "./components/CustomerProfile";
 import FlashSale from "./components/FlashSale";
 import SearchResultsView from "./components/SearchResultsView";
 import ShopView from "./components/ShopView";
-import { Product, CartItem, Order } from "./types";
+import { Product, CartItem, Order, BrandingSettings } from "./types";
 import { PRODUCTS, CATEGORIES } from "./data";
+
+function getHoverColor(hex: string): string {
+  hex = hex.replace("#", "");
+  let r = parseInt(hex.substring(0, 2), 16);
+  let g = parseInt(hex.substring(2, 4), 16);
+  let b = parseInt(hex.substring(4, 6), 16);
+  
+  // Darken by 15%
+  r = Math.max(0, Math.floor(r * 0.85));
+  g = Math.max(0, Math.floor(g * 0.85));
+  b = Math.max(0, Math.floor(b * 0.85));
+  
+  const rs = r.toString(16).padStart(2, "0");
+  const gs = g.toString(16).padStart(2, "0");
+  const bs = b.toString(16).padStart(2, "0");
+  return `#${rs}${gs}${bs}`;
+}
+
+function getFaintColor(hex: string): string {
+  hex = hex.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, 0.08)`;
+}
 
 export default function App() {
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  
+  const [brandingSettings, setBrandingSettings] = useState<BrandingSettings>(() => {
+    try {
+      const saved = localStorage.getItem("zshop_bd_branding_v1");
+      return saved ? JSON.parse(saved) : {
+        logoText: "ZSHOP",
+        logoSuffix: "BD",
+        logoSlogan: "Retail Revolution",
+        logoType: "text",
+        logoImage: "",
+        primaryColor: "#f85606",
+        primaryFaintColor: "#fff2ed"
+      };
+    } catch {
+      return {
+        logoText: "ZSHOP",
+        logoSuffix: "BD",
+        logoSlogan: "Retail Revolution",
+        logoType: "text",
+        logoImage: "",
+        primaryColor: "#f85606",
+        primaryFaintColor: "#fff2ed"
+      };
+    }
+  });
+
+  const fetchBrandingSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setBrandingSettings(data.settings);
+        localStorage.setItem("zshop_bd_branding_v1", JSON.stringify(data.settings));
+      }
+    } catch (err) {
+      console.error("Failed to load branding settings:", err);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -111,6 +174,7 @@ export default function App() {
   useEffect(() => {
     fetchProducts();
     fetchOrders();
+    fetchBrandingSettings();
 
     // Track uniquely per session
     if (!sessionStorage.getItem("zshop_visit_logged")) {
@@ -126,8 +190,13 @@ export default function App() {
       initMetaPixel();
     };
 
+    const handleBrandingUpdate = () => {
+      fetchBrandingSettings();
+    };
+
     window.addEventListener("products_db_sync_update", fetchProducts);
     window.addEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
+    window.addEventListener("zshop_bd_branding_updated", handleBrandingUpdate);
     
     // Auto-poll merchant items periodically (every 15s) so customer catalog stays updated reactively
     const pollInterval = setInterval(() => {
@@ -137,6 +206,7 @@ export default function App() {
     return () => {
       window.removeEventListener("products_db_sync_update", fetchProducts);
       window.removeEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
+      window.removeEventListener("zshop_bd_branding_updated", handleBrandingUpdate);
       clearInterval(pollInterval);
     };
   }, []);
@@ -471,8 +541,99 @@ export default function App() {
 
   const activeCategoryDetail = CATEGORIES.find((c) => c.id === selectedCategory);
 
+  const dynamicCss = useMemo(() => {
+    const color = brandingSettings.primaryColor || "#f85606";
+    const hoverColor = getHoverColor(color);
+    const faintColor = getFaintColor(color);
+
+    return `
+      :root {
+        --primary-color: ${color};
+        --primary-color-hover: ${hoverColor};
+        --primary-faint: ${faintColor};
+      }
+      
+      .bg-\\[\\#f85606\\] {
+        background-color: var(--primary-color) !important;
+      }
+      .hover\\:bg-\\[\\#f85606\\]:hover {
+        background-color: var(--primary-color) !important;
+      }
+      .hover\\:bg-\\[\\#d64a05\\]:hover, .hover\\:bg-\\[\\#d63e00\\]:hover {
+        background-color: var(--primary-color-hover) !important;
+      }
+      .bg-[#f85606] {
+        background-color: var(--primary-color) !important;
+      }
+      .hover\\:bg-[#f85606]:hover {
+        background-color: var(--primary-color) !important;
+      }
+      .hover\\:bg-[#d64a05]:hover, .hover\\:bg-[#d63e00]:hover {
+        background-color: var(--primary-color-hover) !important;
+      }
+      
+      .text-\\[\\#f85606\\] {
+        color: var(--primary-color) !important;
+      }
+      .hover\\:text-\\[\\#f85606\\]:hover {
+        color: var(--primary-color) !important;
+      }
+      .text-[#f85606] {
+        color: var(--primary-color) !important;
+      }
+      .hover\\:text-[#f85606]:hover {
+        color: var(--primary-color) !important;
+      }
+      
+      .border-\\[\\#f85606\\] {
+        border-color: var(--primary-color) !important;
+      }
+      .hover\\:border-\\[\\#f85606\\]:hover {
+        border-color: var(--primary-color) !important;
+      }
+      .focus-within\\:border-\\[\\#f85606\\]:focus-within {
+        border-color: var(--primary-color) !important;
+      }
+      .focus\\:border-\\[\\#f85606\\]:focus {
+        border-color: var(--primary-color) !important;
+      }
+      .border-[#f85606] {
+        border-color: var(--primary-color) !important;
+      }
+      .hover\\:border-[#f85606]:hover {
+        border-color: var(--primary-color) !important;
+      }
+      .focus-within\\:border-[#f85606]:focus-within {
+        border-color: var(--primary-color) !important;
+      }
+      .focus\\:border-[#f85606]:focus {
+        border-color: var(--primary-color) !important;
+      }
+      
+      .bg-\\[\\#fff2ed\\], .bg-orange-50\\/50, .bg-orange-50 {
+        background-color: var(--primary-faint) !important;
+      }
+      .border-\\[\\#fff2ed\\] {
+        border-color: var(--primary-faint) !important;
+      }
+      .text-\\[\\#fff2ed\\] {
+        color: var(--primary-faint) !important;
+      }
+      .bg-[#fff2ed], .bg-orange-50/50, .bg-orange-50 {
+        background-color: var(--primary-faint) !important;
+      }
+      .border-[#fff2ed] {
+        border-color: var(--primary-faint) !important;
+      }
+      .text-[#fff2ed] {
+        color: var(--primary-faint) !important;
+      }
+    `;
+  }, [brandingSettings]);
+
   return (
     <div className="flex flex-col min-h-screen bg-white text-slate-900" id="applet-viewport">
+      <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
       
       {/* 1. Header Navigation elements */}
       <Navbar
@@ -492,6 +653,7 @@ export default function App() {
         }}
         onOpenProfile={() => setIsCustomerProfileOpen(true)}
         products={products}
+        branding={brandingSettings}
       />
 
       <main className="flex-1">
@@ -503,6 +665,7 @@ export default function App() {
             onAddToCart={handleAddToCart}
             onOrderNow={handleOrderNow}
             onOpenQuickView={handleOpenQuickView}
+            branding={brandingSettings}
           />
         ) : (
           <>
@@ -835,13 +998,14 @@ export default function App() {
       </main>
 
       {/* 7. Primary footer section */}
-      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+      <Footer onOpenAdmin={() => setIsAdminOpen(true)} branding={brandingSettings} />
 
       {/* Dynamic admin workspace control system */}
       <AdminPanel
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}
         products={products}
+        branding={brandingSettings}
         onUpdateProducts={async (updated) => {
           setProducts(updated);
           try {
@@ -910,6 +1074,7 @@ export default function App() {
         }}
         setSearchQuery={setSearchQuery}
         onViewShop={(shopName) => setSelectedShopName(shopName)}
+        branding={brandingSettings}
       />
 
       {/* Smooth back to top trigger */}

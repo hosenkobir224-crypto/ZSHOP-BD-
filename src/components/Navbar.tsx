@@ -20,7 +20,7 @@ import {
   Camera,
   Loader2
 } from "lucide-react";
-import { Category, CartItem, Product } from "../types";
+import { Category, CartItem, Product, BrandingSettings } from "../types";
 import { CATEGORIES } from "../data";
 
 interface NavbarProps {
@@ -32,6 +32,7 @@ interface NavbarProps {
   setSearchQuery: (query: string) => void;
   onOpenProfile: () => void;
   products: Product[];
+  branding?: BrandingSettings;
 }
 
 export default function Navbar({
@@ -43,6 +44,7 @@ export default function Navbar({
   setSearchQuery,
   onOpenProfile,
   products,
+  branding,
 }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
@@ -202,17 +204,23 @@ export default function Navbar({
             </button>
             
             <a href="/" className="flex items-center gap-2 select-none group" id="navbar-logo">
-              <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-xl tracking-tight shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform duration-200">
-                Z
-              </div>
-              <div className="flex flex-col">
-                <span className="font-display font-extrabold text-2xl tracking-normal text-slate-950 leading-none">
-                  ZSHOP<span className="text-amber-500 font-semibold text-lg ml-0.5">BD</span>
-                </span>
-                <span className="text-[9px] tracking-[0.18em] uppercase text-gray-500 font-mono mt-0.5 font-medium">
-                  Retail Revolution
-                </span>
-              </div>
+              {branding?.logoType === "image" && branding?.logoImage ? (
+                <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-10 object-contain" />
+              ) : (
+                <>
+                  <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-xl tracking-tight shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform duration-200">
+                    {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-display font-extrabold text-2xl tracking-normal text-slate-950 leading-none">
+                      {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-lg ml-0.5">{branding?.logoSuffix || "BD"}</span>
+                    </span>
+                    <span className="text-[9px] tracking-[0.18em] uppercase text-gray-500 font-mono mt-0.5 font-medium">
+                      {branding?.logoSlogan || "Retail Revolution"}
+                    </span>
+                  </div>
+                </>
+              )}
             </a>
           </div>
 
