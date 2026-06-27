@@ -60,7 +60,7 @@ export default function Hero({ onCtaClick }: HeroProps) {
   return (
     <section className="w-full bg-linear-to-b from-gray-50 to-white pt-2 pb-8 px-4 sm:px-6 lg:px-8" id="hero-slider-section">
       <div className="max-w-7xl mx-auto">
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 bg-slate-900 aspect-3/4 sm:aspect-[16/9] md:aspect-[3/1] lg:aspect-[3.2/1] min-h-[360px]">
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 bg-slate-900 aspect-[1.8/1] sm:aspect-[2.2/1] md:aspect-[3.2/1] lg:aspect-[3.8/1] xl:aspect-[4/1] min-h-[180px] sm:min-h-[240px] md:min-h-[280px] lg:min-h-[320px]">
           
           {/* Active Banner Slide */}
           <div className="absolute inset-0 w-full h-full">
@@ -78,29 +78,29 @@ export default function Hero({ onCtaClick }: HeroProps) {
                     className="w-full h-full object-cover object-center transform scale-105 hover:scale-110 duration-10000 transition-transform"
                   />
                   {/* Modern image overlay/fade gradient for mobile portrait readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent md:bg-linear-to-r md:from-slate-950 md:via-slate-950/20 md:to-transparent z-10" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent md:bg-linear-to-r md:from-slate-950 md:via-slate-950/20 md:to-transparent z-10" />
                 </div>
 
                 {/* Promotional Overlay Texts Box */}
-                <div className={`relative z-20 md:w-2/5 h-full bg-slate-950 flex flex-col justify-end md:justify-center p-6 sm:p-10 md:p-12 order-2 md:order-1 text-left`}>
-                  <div className="mb-3.5 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-400 font-display text-xs font-bold rounded-full w-fit border border-amber-500/25">
+                <div className={`relative z-20 md:w-2/5 h-full bg-transparent md:bg-slate-950 flex flex-col justify-end md:justify-center p-4 sm:p-8 md:p-10 lg:p-12 order-2 md:order-1 text-left`}>
+                  <div className="mb-2 sm:mb-3 inline-flex items-center gap-1 px-2 py-0.5 sm:px-3 sm:py-1 bg-amber-500/10 text-amber-400 font-display text-[9px] sm:text-xs font-bold rounded-full w-fit border border-amber-500/25">
                     {promo.badge}
                   </div>
                   
-                  <h1 className="text-2xl sm:text-3.5xl md:text-3.5xl lg:text-4.5xl font-display font-black text-white leading-tight tracking-tight mb-3">
+                  <h1 className="text-sm xs:text-base sm:text-2xl md:text-2.5xl lg:text-3.5xl xl:text-4.5xl font-display font-black text-white leading-tight tracking-tight mb-1.5 sm:mb-3 drop-shadow-sm">
                     {promo.title}
                   </h1>
                   
-                  <p className="text-xs sm:text-sm text-slate-300 font-sans leading-relaxed mb-6 max-w-sm md:max-w-md font-medium">
+                  <p className="text-[10px] sm:text-xs md:text-sm text-slate-300 font-sans leading-relaxed mb-3 sm:mb-6 max-w-xs sm:max-w-md font-medium line-clamp-2 sm:line-clamp-none drop-shadow-xs">
                     {promo.subtitle}
                   </p>
 
                   <button
                     onClick={() => onCtaClick(promo.link)}
-                    className="w-full sm:w-fit px-6 py-3 bg-white text-slate-950 hover:bg-amber-400 hover:text-slate-950 text-xs font-display font-bold rounded-xl transition-all duration-300 shadow-lg hover:shadow-amber-500/10 flex items-center justify-center gap-2 group cursor-pointer focus:outline-none"
+                    className="w-fit px-4 py-1.5 sm:px-6 sm:py-3 bg-white text-slate-950 hover:bg-amber-400 hover:text-slate-950 text-[10px] sm:text-xs font-display font-bold rounded-lg sm:rounded-xl transition-all duration-300 shadow-lg hover:shadow-amber-500/10 flex items-center justify-center gap-1.5 sm:gap-2 group cursor-pointer focus:outline-none"
                   >
                     <span>{promo.ctaText}</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>
               </div>

@@ -660,6 +660,24 @@ export default function AdminPanel({
 
   const handleDeleteProduct = (productId: string) => {
     if (window.confirm(`আপনি কি এই পণ্যটি তালিকা থেকে ডিলিট করতে চান?`)) {
+      // Prevent client restore/sync of deleted product
+      try {
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_products_v1");
+        const deletedIds = deletedRaw ? JSON.parse(deletedRaw) : [];
+        if (!deletedIds.includes(productId)) {
+          deletedIds.push(productId);
+          localStorage.setItem("zshop_bd_deleted_products_v1", JSON.stringify(deletedIds));
+        }
+        const localRaw = localStorage.getItem("zshop_bd_products_v1");
+        if (localRaw) {
+          const localProducts = JSON.parse(localRaw);
+          const filtered = localProducts.filter((p: any) => p.id !== productId);
+          localStorage.setItem("zshop_bd_products_v1", JSON.stringify(filtered));
+        }
+      } catch (e) {
+        console.error("Local storage delete error:", e);
+      }
+
       const updated = products.filter(p => p.id !== productId);
       onUpdateProducts(updated);
     }

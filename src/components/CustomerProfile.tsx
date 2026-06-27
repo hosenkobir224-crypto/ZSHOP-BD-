@@ -143,6 +143,10 @@ export default function CustomerProfile({
   // ==================== Merchant Dashboard Data ====================
   const [merchantProducts, setMerchantProducts] = useState<Product[]>([]);
   const [serverOrders, setServerOrders] = useState<Order[]>([]);
+  const [selectedMerchantOrderId, setSelectedMerchantOrderId] = useState<string | null>(null);
+  const [salesOverviewMetric, setSalesOverviewMetric] = useState<"revenue" | "orders">("revenue");
+  const [salesTimeframe, setSalesTimeframe] = useState<"monthly" | "weekly">("monthly");
+  const [hoveredPointIdx, setHoveredPointIdx] = useState<number | null>(null);
   
   // Add Product Form State
   const [prodTitle, setProdTitle] = useState("");
@@ -863,6 +867,24 @@ export default function CustomerProfile({
     if (!window.confirm("আপনি কি নিশ্চিতভাবে এই প্রোডাক্টটি চিরতরে মুছে ফেলতে চান?")) return;
 
     try {
+      // Prevent client restore/sync of deleted product
+      try {
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_products_v1");
+        const deletedIds = deletedRaw ? JSON.parse(deletedRaw) : [];
+        if (!deletedIds.includes(prodId)) {
+          deletedIds.push(prodId);
+          localStorage.setItem("zshop_bd_deleted_products_v1", JSON.stringify(deletedIds));
+        }
+        const localRaw = localStorage.getItem("zshop_bd_products_v1");
+        if (localRaw) {
+          const localProducts = JSON.parse(localRaw);
+          const filtered = localProducts.filter((p: any) => p.id !== prodId);
+          localStorage.setItem("zshop_bd_products_v1", JSON.stringify(filtered));
+        }
+      } catch (e) {
+        console.error("Local storage delete error:", e);
+      }
+
       const res = await fetch("/api/products/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -895,6 +917,34 @@ export default function CustomerProfile({
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Update Order Status
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: "Pending" | "Confirmed" | "Shipped" | "Delivered" | "Cancelled") => {
+    if (!activeMerchant) return;
+    const updatedOrders = serverOrders.map(o => {
+      if (o.id === orderId) {
+        return { ...o, status: newStatus };
+      }
+      return o;
+    });
+
+    try {
+      const res = await fetch("/api/admin/orders/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orders: updatedOrders })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setServerOrders(updatedOrders);
+        window.dispatchEvent(new Event("order_status_update"));
+      } else {
+        alert("অর্ডার স্ট্যাটাস আপডেট করতে ব্যর্থ হয়েছে।");
+      }
+    } catch (err) {
+      console.error("Failed to update order status:", err);
     }
   };
 
@@ -2447,16 +2497,9 @@ export default function CustomerProfile({
                         </div>
                         <div className="flex items-center gap-3.5 shrink-0">
                           <button className="px-3.5 py-1.5 bg-slate-50 border border-gray-200 hover:bg-slate-100 rounded-xl text-xs font-bold text-slate-700 font-sans transition-colors cursor-pointer flex items-center gap-1">
-                            <span>Log In</span>
+                            <Smartphone className="w-3.5 h-3.5 text-gray-500" />
+                            <span>Preview Shop</span>
                           </button>
-                          <div className="bg-white border border-gray-205 p-2 py-1.5 rounded-xl flex items-center gap-2 text-xs font-sans shadow-2xs select-none">
-                            <Store className="w-4 h-4 text-slate-500" />
-                            <div>
-                              <p className="text-[9px] text-gray-400 leading-none">Merchant Profile</p>
-                              <p className="font-extrabold text-[#f85606] leading-snug mt-0.5">{activeMerchant.shopName || "Elegant Fashions"}</p>
-                            </div>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400 ml-1" />
-                          </div>
                         </div>
                       </div>
 
@@ -2472,7 +2515,7 @@ export default function CustomerProfile({
                             </div>
                           </div>
                           <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-sans">
-                            {Math.max(1450, connectedMerchantOrders.length).toLocaleString()}
+                            {connectedMerchantOrders.length.toLocaleString()}
                           </p>
                         </div>
 
@@ -2485,7 +2528,7 @@ export default function CustomerProfile({
                             </div>
                           </div>
                           <p className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight font-sans truncate">
-                            BDT {formatBDT(Math.max(625000, completedEarnings))}
+                            BDT {formatBDT(completedEarnings)}
                           </p>
                         </div>
 
@@ -2498,7 +2541,7 @@ export default function CustomerProfile({
                             </div>
                           </div>
                           <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-sans">
-                            {Math.max(320, merchantProducts.length).toLocaleString()}
+                            {merchantProducts.length.toLocaleString()}
                           </p>
                         </div>
 
@@ -2511,7 +2554,12 @@ export default function CustomerProfile({
                             </div>
                           </div>
                           <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight font-sans">
-                            4.8 / 5
+                            {(() => {
+                              if (!merchantProducts || merchantProducts.length === 0) return "5.0 / 5";
+                              const ratings = merchantProducts.map(p => p.rating || 5);
+                              const avg = ratings.reduce((sum, r) => sum + r, 0) / ratings.length;
+                              return `${avg.toFixed(1)} / 5`;
+                            })()}
                           </p>
                         </div>
 
@@ -2523,111 +2571,7 @@ export default function CustomerProfile({
                         {/* LEFT COLUMN GROUP */}
                         <div className="space-y-6">
                           
-                          {/* Sales Overview Component */}
-                          <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                              <div className="flex items-center gap-2">
-                                <TrendingUp className="w-4 h-4 text-[#f85606]" />
-                                <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest font-sans">Sales Overview</h4>
-                              </div>
-                              <div className="relative">
-                                <button className="text-[10px] font-bold border border-gray-200 px-2.5 py-1.5 rounded-lg text-slate-700 bg-gray-50 flex items-center gap-1 hover:bg-slate-100 cursor-pointer">
-                                  <span>Manage</span>
-                                  <ChevronDown className="w-3 h-3 text-gray-500" />
-                                </button>
-                              </div>
-                            </div>
 
-                            {/* Chart Labels */}
-                            <div className="flex items-center gap-4 text-[10px] font-semibold text-gray-500 ml-1">
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#1e40af]" />
-                                <span>Sales</span>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#dc2626]" />
-                                <span>Hnit</span>
-                              </div>
-                            </div>
-
-                            {/* Custom SVG Line Chart */}
-                            <div className="w-full h-48 sm:h-56 select-none relative bg-[#FCFCFD] border border-gray-100 rounded-xl p-2 flex flex-col justify-between">
-                              <svg className="w-full h-full" viewBox="0 0 500 180" preserveAspectRatio="none">
-                                <defs>
-                                  <linearGradient id="blueAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#1e40af" stopOpacity="0.25" />
-                                    <stop offset="100%" stopColor="#1e40af" stopOpacity="0.01" />
-                                  </linearGradient>
-                                  <linearGradient id="redAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#dc2626" stopOpacity="0.25" />
-                                    <stop offset="100%" stopColor="#dc2626" stopOpacity="0.01" />
-                                  </linearGradient>
-                                </defs>
-
-                                {/* Y-axis horizontal gridlines */}
-                                <line x1="40" y1="20" x2="480" y2="20" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="45" x2="480" y2="45" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="70" x2="480" y2="70" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="95" x2="480" y2="95" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="120" x2="480" y2="120" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="145" x2="480" y2="145" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="3 3" />
-                                <line x1="40" y1="160" x2="480" y2="160" stroke="#94A3B8" strokeWidth="1" />
-
-                                {/* Y-axis Labels */}
-                                <text x="15" y="24" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">600</text>
-                                <text x="15" y="49" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">500</text>
-                                <text x="15" y="74" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">400</text>
-                                <text x="15" y="99" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">300</text>
-                                <text x="15" y="124" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">200</text>
-                                <text x="15" y="149" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">100</text>
-                                <text x="15" y="164" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">0</text>
-
-                                {/* Sales Area & Path (Blue line) */}
-                                <path 
-                                  d="M 40 145 C 90 110, 150 90, 200 110 C 250 130, 290 50, 360 40 C 420 30, 440 120, 480 80 L 480 160 L 40 160 Z" 
-                                  fill="url(#blueAreaGrad)" 
-                                />
-                                <path 
-                                  d="M 40 145 C 90 110, 150 90, 200 110 C 250 130, 290 50, 360 40 C 420 30, 440 120, 480 80" 
-                                  fill="none" 
-                                  stroke="#1e40af" 
-                                  strokeWidth="2.5" 
-                                />
-
-                                {/* Hnit Area & Path (Red line) */}
-                                <path 
-                                  d="M 40 155 C 80 130, 140 120, 200 80 C 260 40, 310 115, 360 100 C 410 85, 440 130, 480 50 L 480 160 L 40 160 Z" 
-                                  fill="url(#redAreaGrad)" 
-                                />
-                                <path 
-                                  d="M 40 155 C 80 130, 140 120, 200 80 C 260 40, 310 115, 360 100 C 410 85, 440 130, 480 50" 
-                                  fill="none" 
-                                  stroke="#dc2626" 
-                                  strokeWidth="2.5" 
-                                />
-
-                                {/* Interactive Dots */}
-                                <circle cx="40" cy="145" r="4.5" fill="#1e40af" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="200" cy="110" r="4.5" fill="#1e40af" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="360" cy="40" r="4.5" fill="#1e40af" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="480" cy="80" r="4.5" fill="#1e40af" stroke="#ffffff" strokeWidth="1.5" />
-
-                                <circle cx="40" cy="155" r="4.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="200" cy="80" r="4.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="360" cy="100" r="4.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
-                                <circle cx="480" cy="50" r="4.5" fill="#dc2626" stroke="#ffffff" strokeWidth="1.5" />
-
-                                {/* X Axis Labels */}
-                                <text x="40" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2023</text>
-                                <text x="113" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2024</text>
-                                <text x="186" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2025</text>
-                                <text x="260" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2026</text>
-                                <text x="333" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2012</text>
-                                <text x="406" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2028</text>
-                                <text x="480" y="176" className="text-[9px] fill-[#64748B] font-mono" textAnchor="middle">2023</text>
-                              </svg>
-                            </div>
-                          </div>
 
                           {/* Top Selling Products Component */}
                           <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
@@ -2642,51 +2586,86 @@ export default function CustomerProfile({
                             </div>
 
                             <div className="space-y-3.5">
-                              {[
-                                {
-                                  title: "Stumen's Woyal Georgette Embroidered Kurti",
-                                  price: 4200,
-                                  rating: 4.8,
-                                  reviews: 13,
-                                  image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=300"
-                                },
-                                {
-                                  title: "Stomen's Royal Georgettte Embroidered Kurti",
-                                  price: 4200,
-                                  rating: 4.5,
-                                  reviews: 33,
-                                  image: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=300"
-                                },
-                                {
-                                  title: "Stunning Women Rari Georgette Kri Embroidered Kurti",
-                                  price: 4500,
-                                  rating: 4.9,
-                                  reviews: 47,
-                                  image: "https://images.unsplash.com/photo-1610030469668-93535c17b6b3?auto=format&fit=crop&q=80&w=300"
-                                }
-                              ].map((item, idx) => (
-                                <div key={idx} className="flex items-center gap-3 bg-[#FCFCFD] border border-gray-150 rounded-xl p-2.5">
-                                  <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white border border-gray-100 animate-pulse-slow">
-                                    <img 
-                                      referrerPolicy="no-referrer"
-                                      src={item.image} 
-                                      alt="kurti" 
-                                      className="w-full h-full object-cover" 
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="font-bold text-slate-900 text-xs truncate leading-snug">{item.title}</h5>
-                                    <div className="flex items-center gap-0.5 mt-0.5">
-                                      {[...Array(4)].map((_, i) => (
-                                        <Star key={i} className="w-3 h-3 text-amber-450 fill-current" />
-                                      ))}
-                                      <Star className="w-3 h-3 text-gray-300 fill-current" />
-                                      <span className="text-[10px] text-gray-400 font-medium ml-1">({item.reviews})</span>
+                              {(() => {
+                                if (!merchantProducts || merchantProducts.length === 0) {
+                                  return (
+                                    <div className="text-center py-8 px-4 bg-[#FCFCFD] border border-gray-150 border-dashed rounded-xl">
+                                      <ShoppingBag className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                      <p className="text-xs text-gray-500 font-medium">কোনো পণ্য পাওয়া যায়নি!</p>
+                                      <p className="text-[10px] text-gray-400 mt-1">প্রোডাক্ট যোগ করুন এবং অর্ডার পেলে এখানে টপ সেলিং প্রোডাক্টগুলো দেখতে পাবেন।</p>
+                                      <button 
+                                        onClick={() => setMerchantTab("add")}
+                                        className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:underline cursor-pointer"
+                                      >
+                                        <span>নতুন প্রোডাক্ট যোগ করুন</span>
+                                        <Plus className="w-3 h-3" />
+                                      </button>
                                     </div>
-                                  </div>
-                                  <span className="font-bold font-mono text-xs pr-1 text-slate-900">৳{item.price}</span>
-                                </div>
-                              ))}
+                                  );
+                                }
+
+                                // Count sales from connectedMerchantOrders
+                                const salesMap = new Map<string, number>();
+                                connectedMerchantOrders.forEach(ord => {
+                                  ord.cartItems.forEach(item => {
+                                    salesMap.set(item.productId, (salesMap.get(item.productId) || 0) + item.quantity);
+                                  });
+                                });
+
+                                const dynamicTopProducts = merchantProducts
+                                  .map(prod => ({
+                                    ...prod,
+                                    salesCount: salesMap.get(prod.id) || 0,
+                                    rating: prod.rating || 5,
+                                    reviewsCount: prod.reviewsCount || 0
+                                  }))
+                                  .sort((a, b) => {
+                                    if (b.salesCount !== a.salesCount) {
+                                      return b.salesCount - a.salesCount;
+                                    }
+                                    if (b.rating !== a.rating) {
+                                      return b.rating - a.rating;
+                                    }
+                                    return b.reviewsCount - a.reviewsCount;
+                                  })
+                                  .slice(0, 5);
+
+                                return dynamicTopProducts.map((item) => {
+                                  const ratingVal = Math.round(item.rating);
+                                  return (
+                                    <div key={item.id} className="flex items-center gap-3 bg-[#FCFCFD] border border-gray-150 rounded-xl p-2.5">
+                                      <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-white border border-gray-100">
+                                        <img 
+                                          referrerPolicy="no-referrer"
+                                          src={item.image} 
+                                          alt={item.title} 
+                                          className="w-full h-full object-cover" 
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h5 className="font-bold text-slate-900 text-xs truncate leading-snug">{item.title}</h5>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                          <div className="flex items-center gap-0.5">
+                                            {[...Array(5)].map((_, i) => (
+                                              <Star 
+                                                key={i} 
+                                                className={`w-3 h-3 ${i < ratingVal ? "text-amber-450 fill-current" : "text-gray-300 fill-current"}`} 
+                                              />
+                                            ))}
+                                          </div>
+                                          <span className="text-[10px] text-gray-400 font-medium">({item.reviewsCount} reviews)</span>
+                                          {item.salesCount > 0 && (
+                                            <span className="text-[9px] bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded-md font-bold font-sans">
+                                              {item.salesCount} Sold
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <span className="font-bold font-mono text-xs pr-1 text-slate-900">৳{item.price}</span>
+                                    </div>
+                                  );
+                                });
+                              })()}
                             </div>
                           </div>
 
@@ -2776,28 +2755,93 @@ export default function CustomerProfile({
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 text-xs">
-                                  {[
-                                    { id: "0220301", date: "24-05-2023", name: "Rish Stnier", status: "Pending" },
-                                    { id: "0220302", date: "24-05-2023", name: "Dirian Hinaur", status: "Shipped" },
-                                    { id: "0220303", date: "24-05-2023", name: "Avah Hantin", status: "Shipped" },
-                                    { id: "0220304", date: "24-05-2023", name: "Jane Smith", status: "Processing" },
-                                  ].map((row, index) => (
-                                    <tr key={index} className="hover:bg-[#FCFCFD]">
-                                      <td className="py-3 font-bold font-mono text-slate-900">{row.id}</td>
-                                      <td className="py-3 font-mono text-gray-400 text-[11px]">{row.date}</td>
-                                      <td className="py-3 font-medium text-slate-700">{row.name}</td>
-                                      <td className="py-3 text-right">
-                                        <span className={`inline-block px-2 py-0.5 text-[9px] font-bold rounded uppercase font-sans tracking-wide ${
-                                          row.status === "Pending" ? "bg-[#FFF9E6] text-[#cc8e00]" :
-                                          row.status === "Shipped" ? "bg-[#EBF7FF] text-[#0066b2]" :
-                                          row.status === "Processing" ? "bg-[#F5EDFD] text-[#5e2ca8]" :
-                                          "bg-gray-100 text-gray-700"
-                                        }`}>
-                                          {row.status}
-                                        </span>
-                                      </td>
-                                    </tr>
-                                  ))}
+                                  {(() => {
+                                    let ordersToProcess = connectedMerchantOrders;
+
+                                    // Apply forum filters if set
+                                    if (forumOrderId) {
+                                      ordersToProcess = ordersToProcess.filter(ord => 
+                                        ord.id.toLowerCase().includes(forumOrderId.toLowerCase())
+                                      );
+                                    }
+                                    if (forumCustomerName) {
+                                      ordersToProcess = ordersToProcess.filter(ord => 
+                                        ord.customerName.toLowerCase().includes(forumCustomerName.toLowerCase())
+                                      );
+                                    }
+                                    if (forumEmailDate) {
+                                      ordersToProcess = ordersToProcess.filter(ord => {
+                                        try {
+                                          const d = new Date(ord.timestamp);
+                                          const dateStr = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+                                          return dateStr.includes(forumEmailDate);
+                                        } catch {
+                                          return false;
+                                        }
+                                      });
+                                    }
+                                    if (forumStatus) {
+                                      ordersToProcess = ordersToProcess.filter(ord => ord.status === forumStatus);
+                                    }
+                                    if (forumSearch) {
+                                      const sq = forumSearch.toLowerCase();
+                                      ordersToProcess = ordersToProcess.filter(ord => 
+                                        ord.id.toLowerCase().includes(sq) ||
+                                        ord.customerName.toLowerCase().includes(sq) ||
+                                        ord.phone.includes(sq) ||
+                                        (ord.address && ord.address.toLowerCase().includes(sq))
+                                      );
+                                    } else if (!forumOrderId && !forumCustomerName && !forumEmailDate) {
+                                      // Default filter: active orders to process
+                                      ordersToProcess = ordersToProcess.filter(
+                                        (ord) => ord.status !== "Delivered" && ord.status !== "Cancelled"
+                                      );
+                                    }
+
+                                    if (ordersToProcess.length === 0) {
+                                      return (
+                                        <tr>
+                                          <td colSpan={4} className="py-8 text-center text-gray-400 font-medium">
+                                            প্রক্রিয়া করার জন্য কোনো নতুন অর্ডার নেই।
+                                          </td>
+                                        </tr>
+                                      );
+                                    }
+
+                                    return ordersToProcess.slice(0, 5).map((row) => {
+                                      let dateStr = "N/A";
+                                      try {
+                                        const d = new Date(row.timestamp);
+                                        if (!isNaN(d.getTime())) {
+                                          const day = String(d.getDate()).padStart(2, '0');
+                                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                                          const year = d.getFullYear();
+                                          dateStr = `${day}-${month}-${year}`;
+                                        }
+                                      } catch {}
+
+                                      return (
+                                        <tr key={row.id} className="hover:bg-[#FCFCFD] cursor-pointer" onClick={() => setMerchantTab("orders")}>
+                                          <td className="py-3 font-bold font-mono text-slate-900">
+                                            #{row.id.replace("ord-", "").slice(0, 7).toUpperCase()}
+                                          </td>
+                                          <td className="py-3 font-mono text-gray-400 text-[11px]">{dateStr}</td>
+                                          <td className="py-3 font-medium text-slate-700 truncate max-w-[120px]">{row.customerName}</td>
+                                          <td className="py-3 text-right">
+                                            <span className={`inline-block px-2 py-0.5 text-[9px] font-bold rounded uppercase font-sans tracking-wide ${
+                                              row.status === "Pending" ? "bg-[#FFF9E6] text-[#cc8e00]" :
+                                              row.status === "Confirmed" ? "bg-[#E7F7EE] text-[#047857]" :
+                                              row.status === "Shipped" ? "bg-[#EBF7FF] text-[#0066b2]" :
+                                              row.status === "Delivered" ? "bg-green-100 text-green-800" :
+                                              "bg-gray-100 text-gray-700"
+                                            }`}>
+                                              {row.status}
+                                            </span>
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })()}
                                 </tbody>
                               </table>
                             </div>
@@ -2910,16 +2954,16 @@ export default function CustomerProfile({
                             </h4>
                             <div className="space-y-0 text-xs">
                               <div className="flex items-center justify-between py-3 border-b border-[#EBEEF2]">
-                                <span className="font-semibold text-slate-700">Inventory Status</span>
-                                <span className="text-emerald-600 font-bold font-sans">Completed</span>
+                                <span className="font-semibold text-slate-700">Total Products</span>
+                                <span className="text-indigo-600 font-bold font-sans">{merchantProducts.length} Items</span>
                               </div>
                               <div className="flex items-center justify-between py-3 border-b border-[#EBEEF2]">
-                                <span className="font-semibold text-slate-700">Inventory Status</span>
-                                <span className="text-slate-400 font-medium font-sans">Not Postored</span>
+                                <span className="font-semibold text-slate-700">In Stock Products</span>
+                                <span className="text-emerald-600 font-bold font-sans">{merchantProducts.filter(p => p.inStock).length} Items</span>
                               </div>
                               <div className="flex items-center justify-between py-3">
-                                <span className="font-semibold text-slate-700">Inventory Status</span>
-                                <span className="text-emerald-600 font-bold font-sans">Completed</span>
+                                <span className="font-semibold text-slate-700">Stock Out Products</span>
+                                <span className="text-red-500 font-bold font-sans">{merchantProducts.filter(p => !p.inStock).length} Items</span>
                               </div>
                             </div>
                           </div>
@@ -3345,6 +3389,180 @@ export default function CustomerProfile({
                               </div>
                             </div>
                           ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 4: ORDERS MANAGEMENT */}
+                  {merchantTab === "orders" && (
+                    <div className="space-y-4 font-sans text-xs">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                        <div>
+                          <h4 className="text-xs font-bold text-gray-750 uppercase flex items-center justify-between">
+                            <span>অর্ডারস ব্যবস্থাপনা ({connectedMerchantOrders.length})</span>
+                          </h4>
+                          <p className="text-[10px] text-gray-400 font-medium">আপনার স্টোরের কাস্টমারদের অর্ডার এবং শিপমেন্ট প্রসেস করুন।</p>
+                        </div>
+                      </div>
+
+                      {connectedMerchantOrders.length === 0 ? (
+                        <div className="bg-[#FCFCFD] border border-gray-200 p-8 rounded-xl text-center text-slate-450 text-[11px]">
+                          কোনো কাস্টমার অর্ডার পাওয়া যায়নি।
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                          {/* Order List */}
+                          <div className="lg:col-span-5 bg-white border border-gray-150 rounded-2xl p-4 space-y-3 max-h-[55vh] overflow-y-auto">
+                            <span className="block text-[10px] font-extrabold text-gray-500 uppercase tracking-wider mb-1">অর্ডার তালিকা</span>
+                            <div className="space-y-2">
+                              {connectedMerchantOrders.map((ord) => {
+                                const isSelected = selectedMerchantOrderId === ord.id || (!selectedMerchantOrderId && connectedMerchantOrders[0].id === ord.id);
+                                let dateStr = "N/A";
+                                try {
+                                  const d = new Date(ord.timestamp);
+                                  if (!isNaN(d.getTime())) {
+                                    const day = String(d.getDate()).padStart(2, '0');
+                                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                                    const year = d.getFullYear();
+                                    dateStr = `${day}-${month}-${year}`;
+                                  }
+                                } catch {}
+
+                                return (
+                                  <div 
+                                    key={ord.id}
+                                    onClick={() => setSelectedMerchantOrderId(ord.id)}
+                                    className={`p-3 border rounded-xl cursor-pointer transition-all hover:border-rose-500 ${
+                                      isSelected ? "bg-rose-50/40 border-rose-600 shadow-3xs" : "bg-slate-50/40 border-gray-200"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <span className="font-extrabold font-mono text-slate-900">
+                                        #{ord.id.replace("ord-", "").slice(0, 7).toUpperCase()}
+                                      </span>
+                                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${
+                                        ord.status === "Pending" ? "bg-amber-100 text-amber-800" :
+                                        ord.status === "Confirmed" ? "bg-emerald-100 text-emerald-800" :
+                                        ord.status === "Shipped" ? "bg-blue-100 text-blue-800" :
+                                        ord.status === "Delivered" ? "bg-green-100 text-green-800" :
+                                        "bg-red-100 text-red-800"
+                                      }`}>
+                                        {ord.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                                      <span className="text-gray-600 font-semibold">{ord.customerName}</span>
+                                      <span className="text-gray-400 font-mono">{dateStr}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Selected Order Details */}
+                          <div className="lg:col-span-7 bg-white border border-gray-150 rounded-2xl p-4 space-y-4">
+                            {(() => {
+                              const currentOrder = connectedMerchantOrders.find(o => o.id === (selectedMerchantOrderId || connectedMerchantOrders[0].id));
+                              if (!currentOrder) {
+                                return (
+                                  <div className="h-full flex items-center justify-center text-center p-6 text-gray-400 text-[11px]">
+                                    ডানদিকের তালিকা থেকে যেকোনো একটি অর্ডার সিলেক্ট করুন।
+                                  </div>
+                                );
+                              }
+
+                              const merchantItems = currentOrder.cartItems.filter(item => 
+                                merchantProducts.some(p => p.id === item.productId)
+                              );
+
+                              const merchantSubtotal = merchantItems.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+
+                              return (
+                                <div className="space-y-4 text-slate-800">
+                                  {/* Order Title and quick action */}
+                                  <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                    <div>
+                                      <h5 className="font-extrabold text-slate-900 text-xs">
+                                        অর্ডার বিবরণী (Order Detail)
+                                      </h5>
+                                      <p className="text-[9px] font-mono text-gray-400">ID: {currentOrder.id}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                      <label className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">স্ট্যাটাস:</label>
+                                      <select 
+                                        value={currentOrder.status}
+                                        onChange={(e) => handleUpdateOrderStatus(currentOrder.id, e.target.value as any)}
+                                        className="bg-slate-50 border border-gray-200 text-xs font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-rose-500 cursor-pointer"
+                                      >
+                                        <option value="Pending">Pending</option>
+                                        <option value="Confirmed">Confirmed</option>
+                                        <option value="Shipped">Shipped</option>
+                                        <option value="Delivered">Delivered</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  {/* Customer Info */}
+                                  <div className="bg-slate-50/50 p-3 rounded-xl border border-gray-150 space-y-2">
+                                    <h6 className="font-extrabold text-[10px] text-gray-500 uppercase tracking-widest">কাস্টমার তথ্য</h6>
+                                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                      <div>
+                                        <span className="text-gray-400 block text-[9px] uppercase font-bold">নাম:</span>
+                                        <span className="font-bold text-slate-800">{currentOrder.customerName}</span>
+                                      </div>
+                                      <div>
+                                        <span className="text-gray-400 block text-[9px] uppercase font-bold">মোবাইল:</span>
+                                        <span className="font-extrabold font-mono text-slate-800">{currentOrder.phone}</span>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <span className="text-gray-400 block text-[9px] uppercase font-bold">ঠিকানা:</span>
+                                        <span className="font-semibold text-slate-700">{currentOrder.address}, {currentOrder.district}</span>
+                                      </div>
+                                      {currentOrder.instructions && (
+                                        <div className="col-span-2 bg-amber-50/50 p-2 rounded-lg border border-amber-100 text-amber-800 text-[10px]">
+                                          <span className="font-bold block">স্পেশাল নোট:</span>
+                                          <span>{currentOrder.instructions}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Ordered Items list */}
+                                  <div className="space-y-2">
+                                    <h6 className="font-extrabold text-[10px] text-gray-500 uppercase tracking-widest">অর্ডারকৃত প্রোডাক্ট তালিকা ({merchantItems.length})</h6>
+                                    <div className="space-y-1.5 max-h-[16vh] overflow-y-auto pr-1">
+                                      {merchantItems.map((item) => (
+                                        <div key={item.id} className="flex items-center gap-2.5 bg-slate-50/30 p-2 border border-gray-100 rounded-lg">
+                                          <img src={item.image} alt="p" className="w-8 h-8 rounded object-cover border shrink-0 bg-white" />
+                                          <div className="flex-1 min-w-0">
+                                            <h6 className="font-bold text-slate-900 truncate leading-tight text-[11px]">{item.title}</h6>
+                                            <div className="flex items-center gap-1.5 mt-0.5 text-[9px] text-gray-400 font-medium">
+                                              {item.color && <span>রং: {item.color}</span>}
+                                              {item.size && <span>সাইজ: {item.size}</span>}
+                                              <span>Qty: {item.quantity}</span>
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <span className="font-bold font-mono text-slate-900 block">৳{item.price * item.quantity}</span>
+                                            <span className="text-[9px] font-mono text-gray-400 block">৳{item.price} x {item.quantity}</span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {/* Total Breakdown */}
+                                  <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
+                                    <span className="text-slate-500 font-bold uppercase tracking-wider text-[10px]">স্টোর সাব-টোটাল (Subtotal):</span>
+                                    <span className="font-black text-rose-600 font-mono text-sm">৳{formatBDT(merchantSubtotal)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -3929,77 +4147,246 @@ export default function CustomerProfile({
                     <div className="space-y-6">
                       
                       {/* Graphics 1: Sales Overview spline area */}
-                      <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                          <div className="space-y-0.5">
-                            <h4 className="text-sm font-extrabold text-slate-900 uppercase tracking-widest font-sans">
-                              Sales Overview
-                            </h4>
-                            <p className="text-[10px] text-gray-400 font-medium">
-                              Interactive process zene line graph
-                            </p>
-                          </div>
-                          <div className="relative">
-                            <button className="text-[9px] font-extrabold border border-gray-200 px-2 py-1 rounded-lg text-slate-700 bg-gray-50 flex items-center gap-1 hover:bg-slate-100 cursor-pointer">
-                              <span>Interactive in graph</span>
-                              <ChevronDown className="w-2.5 h-2.5 text-gray-500" />
-                            </button>
-                          </div>
-                        </div>
+                      {(() => {
+                        const now = new Date();
+                        const salesGraphData: { label: string; value: number }[] = [];
 
-                        {/* Spline area graph representation */}
-                        <div className="w-full h-44 select-none relative bg-slate-50/50 border border-gray-100 rounded-xl p-2 flex flex-col justify-between">
-                          <svg className="w-full h-full" viewBox="0 0 500 160" preserveAspectRatio="none">
-                            <defs>
-                              <linearGradient id="indigoAreaGraph" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#1e40af" stopOpacity="0.22" />
-                                <stop offset="100%" stopColor="#1e40af" stopOpacity="0.00" />
-                              </linearGradient>
-                            </defs>
+                        if (salesTimeframe === "monthly") {
+                          // Last 6 months
+                          for (let i = 5; i >= 0; i--) {
+                            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                            const label = d.toLocaleString("bn-BD", { month: "short" }) || d.toLocaleString("en-US", { month: "short" });
+                            const year = d.getFullYear();
+                            const month = d.getMonth();
                             
-                            {/* Horizontal light grid lines representing scales */}
-                            <line x1="15" y1="20" x2="485" y2="20" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
-                            <line x1="15" y1="50" x2="485" y2="50" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
-                            <line x1="15" y1="80" x2="485" y2="80" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
-                            <line x1="15" y1="110" x2="485" y2="110" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
-                            <line x1="15" y1="140" x2="485" y2="140" stroke="#94A3B8" strokeWidth="1" />
+                            let sum = 0;
+                            connectedMerchantOrders.forEach((ord) => {
+                              try {
+                                const ordDate = new Date(ord.timestamp);
+                                if (isNaN(ordDate.getTime())) return;
+                                if (ordDate.getFullYear() === year && ordDate.getMonth() === month) {
+                                  if (salesOverviewMetric === "revenue") {
+                                    const merchantItems = ord.cartItems.filter((item) =>
+                                      merchantProducts.some((p) => p.id === item.productId)
+                                    );
+                                    sum += merchantItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                                  } else {
+                                    const hasMerchantItem = ord.cartItems.some((item) =>
+                                      merchantProducts.some((p) => p.id === item.productId)
+                                    );
+                                    if (hasMerchantItem) {
+                                      sum += 1;
+                                    }
+                                  }
+                                }
+                              } catch {}
+                            });
 
-                            {/* Wavy spline line representing clicks/sales */}
-                            <path 
-                              d="M 15 140 C 45 60, 75 100, 105 120 C 135 140, 165 95, 195 90 C 225 85, 255 110, 285 100 C 315 90, 345 50, 375 60 C 405 70, 435 110, 455 100 L 485 30 L 485 140 Z" 
-                              fill="url(#indigoAreaGraph)" 
-                            />
-                            <path 
-                              d="M 15 140 C 45 60, 75 100, 105 120 C 135 140, 165 95, 195 90 C 225 85, 255 110, 285 100 C 315 90, 345 50, 375 60 C 405 70, 435 110, 455 100 L 485 30" 
-                              fill="none" 
-                              stroke="#0f172a" 
-                              strokeWidth="2" 
-                            />
+                            salesGraphData.push({ label, value: sum });
+                          }
+                        } else {
+                          // Last 7 days
+                          for (let i = 6; i >= 0; i--) {
+                            const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+                            const label = `${d.getDate()} ${d.toLocaleString("bn-BD", { month: "short" }) || d.toLocaleString("en-US", { month: "short" })}`;
+                            const year = d.getFullYear();
+                            const month = d.getMonth();
+                            const dateVal = d.getDate();
 
-                            {/* Circles on apex points */}
-                            <circle cx="15" cy="140" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                            <circle cx="105" cy="120" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                            <circle cx="195" cy="90" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                            <circle cx="285" cy="100" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                            <circle cx="375" cy="60" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                            <circle cx="485" cy="30" r="3.5" fill="#0f172a" stroke="#fff" strokeWidth="1.5" />
-                          </svg>
-                          
-                          {/* X-Axis Month labels */}
-                          <div className="flex justify-between text-[9px] font-semibold text-gray-400 font-sans px-1 pt-1 border-t border-gray-150">
-                            <span>Jan 1</span>
-                            <span>Feb 2</span>
-                            <span>Mar 3</span>
-                            <span>Apr 4</span>
-                            <span>May 1</span>
-                            <span>Aug 6</span>
-                            <span>Sep 13</span>
-                            <span>Oct 15</span>
-                            <span>Nov 19</span>
-                            <span>Dec 21</span>
+                            let sum = 0;
+                            connectedMerchantOrders.forEach((ord) => {
+                              try {
+                                const ordDate = new Date(ord.timestamp);
+                                if (isNaN(ordDate.getTime())) return;
+                                if (ordDate.getFullYear() === year && ordDate.getMonth() === month && ordDate.getDate() === dateVal) {
+                                  if (salesOverviewMetric === "revenue") {
+                                    const merchantItems = ord.cartItems.filter((item) =>
+                                      merchantProducts.some((p) => p.id === item.productId)
+                                    );
+                                    sum += merchantItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+                                  } else {
+                                    const hasMerchantItem = ord.cartItems.some((item) =>
+                                      merchantProducts.some((p) => p.id === item.productId)
+                                    );
+                                    if (hasMerchantItem) {
+                                      sum += 1;
+                                    }
+                                  }
+                                }
+                              } catch {}
+                            });
+
+                            salesGraphData.push({ label, value: sum });
+                          }
+                        }
+
+                        const maxVal = Math.max(...salesGraphData.map(d => d.value));
+                        
+                        const svgWidth = 500;
+                        const svgHeight = 160;
+                        const paddingXLeft = 45;
+                        const paddingXRight = 45;
+                        const paddingYTop = 30;
+                        const paddingYBottom = 30;
+
+                        const chartPoints = salesGraphData.map((d, i) => {
+                          const totalPoints = salesGraphData.length;
+                          const x = paddingXLeft + (i * (svgWidth - paddingXLeft - paddingXRight) / (totalPoints - 1));
+                          const y = maxVal > 0 
+                            ? svgHeight - paddingYBottom - ((d.value / maxVal) * (svgHeight - paddingYTop - paddingYBottom))
+                            : svgHeight - paddingYBottom;
+                          return { x, y, label: d.label, value: d.value };
+                        });
+
+                        const linePathD = chartPoints.length > 0 
+                          ? "M " + chartPoints.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" L ")
+                          : "";
+
+                        const areaPathD = chartPoints.length > 0
+                          ? `${linePathD} L ${chartPoints[chartPoints.length - 1].x.toFixed(1)} ${(svgHeight - paddingYBottom).toFixed(1)} L ${chartPoints[0].x.toFixed(1)} ${(svgHeight - paddingYBottom).toFixed(1)} Z`
+                          : "";
+
+                        return (
+                          <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                              <div className="space-y-0.5">
+                                <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 uppercase tracking-widest font-sans flex items-center gap-1.5">
+                                  <span>Sales Overview</span>
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-rose-50 text-rose-600 rounded-full font-bold lowercase tracking-normal">live</span>
+                                </h4>
+                                <p className="text-[10px] text-gray-400 font-medium">
+                                  {salesTimeframe === "monthly" 
+                                    ? "আপনার স্টোরের গত ৬ মাসের বিক্রয় বিবরণী গ্রাফ।" 
+                                    : "আপনার স্টোরের গত ৭ দিনের বিক্রয় বিবরণী গ্রাফ।"}
+                                </p>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={salesOverviewMetric}
+                                  onChange={(e) => setSalesOverviewMetric(e.target.value as any)}
+                                  className="text-[9px] font-extrabold border border-gray-200 px-2 py-1 rounded-lg text-slate-750 bg-gray-50 focus:outline-none focus:border-rose-500 cursor-pointer"
+                                >
+                                  <option value="revenue">৳ মোট আয়</option>
+                                  <option value="orders">📦 অর্ডারস</option>
+                                </select>
+
+                                <select
+                                  value={salesTimeframe}
+                                  onChange={(e) => setSalesTimeframe(e.target.value as any)}
+                                  className="text-[9px] font-extrabold border border-gray-200 px-2 py-1 rounded-lg text-slate-755 bg-gray-50 focus:outline-none focus:border-rose-500 cursor-pointer"
+                                >
+                                  <option value="monthly">মাসিক</option>
+                                  <option value="weekly">সাপ্তাহিক</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* Spline area graph representation */}
+                            <div className="w-full h-48 relative bg-slate-50/50 border border-gray-100 rounded-xl p-2 flex flex-col justify-between">
+                              <svg className="w-full h-full" viewBox="0 0 500 160" preserveAspectRatio="none">
+                                <defs>
+                                  <linearGradient id="indigoAreaGraph" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="#e11d48" stopOpacity="0.22" />
+                                    <stop offset="100%" stopColor="#e11d48" stopOpacity="0.00" />
+                                  </linearGradient>
+                                </defs>
+                                
+                                {/* Horizontal light grid lines representing scales */}
+                                <line x1="15" y1="20" x2="485" y2="20" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="15" y1="50" x2="485" y2="50" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="15" y1="80" x2="485" y2="80" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="15" y1="110" x2="485" y2="110" stroke="#EBEEF2" strokeWidth="1" strokeDasharray="2 2" />
+                                <line x1="15" y1="140" x2="485" y2="140" stroke="#94A3B8" strokeWidth="1" />
+
+                                {/* Wavy spline area representing clicks/sales */}
+                                {maxVal > 0 && chartPoints.length > 0 && (
+                                  <>
+                                    <path 
+                                      d={areaPathD} 
+                                      fill="url(#indigoAreaGraph)" 
+                                    />
+                                    <path 
+                                      d={linePathD} 
+                                      fill="none" 
+                                      stroke="#e11d48" 
+                                      strokeWidth="2.5" 
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </>
+                                )}
+
+                                {/* Hover tooltip guide vertical line */}
+                                {hoveredPointIdx !== null && chartPoints[hoveredPointIdx] && (
+                                  <line 
+                                    x1={chartPoints[hoveredPointIdx].x} 
+                                    y1={20} 
+                                    x2={chartPoints[hoveredPointIdx].x} 
+                                    y2={140} 
+                                    stroke="#cbd5e1" 
+                                    strokeWidth="1.5" 
+                                    strokeDasharray="3 3" 
+                                  />
+                                )}
+
+                                {/* Circles on apex points */}
+                                {maxVal > 0 && chartPoints.map((p, idx) => (
+                                  <circle 
+                                    key={idx}
+                                    cx={p.x} 
+                                    cy={p.y} 
+                                    r={hoveredPointIdx === idx ? "5" : "3.5"} 
+                                    fill={hoveredPointIdx === idx ? "#e11d48" : "#fff"} 
+                                    stroke="#e11d48" 
+                                    strokeWidth="2" 
+                                    className="cursor-pointer transition-all duration-150"
+                                    onMouseEnter={() => setHoveredPointIdx(idx)}
+                                    onMouseLeave={() => setHoveredPointIdx(null)}
+                                  />
+                                ))}
+                              </svg>
+
+                              {/* Interactive hovered tooltip absolute card */}
+                              {hoveredPointIdx !== null && chartPoints[hoveredPointIdx] && (
+                                <div 
+                                  className="absolute bg-slate-900 text-white rounded-lg px-2.5 py-1.5 text-[10px] font-sans font-bold shadow-md pointer-events-none transition-all duration-100 border border-slate-700 flex flex-col items-center"
+                                  style={{
+                                    left: `${(chartPoints[hoveredPointIdx].x / 500) * 100}%`,
+                                    top: `${Math.min(100, Math.max(10, ((chartPoints[hoveredPointIdx].y - 35) / 160) * 100))}%`,
+                                    transform: 'translateX(-50%)'
+                                  }}
+                                >
+                                  <span className="text-gray-300 text-[8px] uppercase">{chartPoints[hoveredPointIdx].label}</span>
+                                  <span className="text-white text-xs mt-0.5 font-bold font-mono">
+                                    {salesOverviewMetric === "revenue" 
+                                      ? `৳${formatBDT(chartPoints[hoveredPointIdx].value)}` 
+                                      : `${chartPoints[hoveredPointIdx].value}টি অর্ডার`}
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* X-Axis Labels */}
+                              <div className="flex justify-between text-[9px] font-extrabold text-gray-500 font-sans px-3 pt-1.5 border-t border-gray-150 bg-white/50 rounded-b-lg">
+                                {salesGraphData.map((d, i) => (
+                                  <span key={i} className="cursor-pointer hover:text-rose-600" onMouseEnter={() => setHoveredPointIdx(i)} onMouseLeave={() => setHoveredPointIdx(null)}>
+                                    {d.label}
+                                  </span>
+                                ))}
+                              </div>
+
+                              {/* Empty State overlay */}
+                              {maxVal === 0 && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-[0.5px] p-4 text-center rounded-xl pointer-events-none">
+                                  <TrendingUp className="w-6 h-6 text-rose-500 mb-1 animate-pulse" />
+                                  <p className="text-[10px] font-extrabold text-slate-700">কোনো সেলস ডেটা নেই</p>
+                                  <p className="text-[9px] text-gray-400 mt-0.5 font-medium">আপনার স্টোর থেকে প্রোডাক্ট বিক্রি শুরু হলে এখানে রিয়েল-টাইম অটোমেটিক সেলস গ্রাফ দেখতে পাবেন।</p>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </div>
+                        );
+                      })()}
 
                       {/* Graphics 2: Promoted Product details */}
                       <div className="bg-white border border-gray-150 rounded-2xl p-5 shadow-sm space-y-4">

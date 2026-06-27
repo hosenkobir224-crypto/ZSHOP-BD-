@@ -102,19 +102,59 @@ export default function App() {
       const res = await fetch("/api/products");
       const data = await res.json();
       if (data.success && data.products) {
-        const merchantProducts = data.products || [];
-        const merged = [...PRODUCTS];
-        // Merge merchant products that are not already present
-        merchantProducts.forEach((mp: Product) => {
-          const index = merged.findIndex(p => p.id === mp.id);
-          if (index !== -1) {
-            merged[index] = mp; // Update in place
-          } else {
-            merged.unshift(mp); // Prepend new seller products
+        const serverProducts = data.products || [];
+
+        // 1. Get locally saved products from localStorage
+        const localRaw = localStorage.getItem("zshop_bd_products_v1");
+        let localProducts: Product[] = [];
+        try {
+          localProducts = localRaw ? JSON.parse(localRaw) : [];
+        } catch (e) {
+          console.error("Failed to parse local products:", e);
+        }
+
+        // 2. Load deleted products IDs list to filter out any deleted custom products
+        const deletedRaw = localStorage.getItem("zshop_bd_deleted_products_v1");
+        const deletedIds: string[] = deletedRaw ? JSON.parse(deletedRaw) : [];
+
+        // 3. Filter localProducts to find custom/merchant products that are not deleted
+        const defaultIds = new Set(PRODUCTS.map(p => p.id));
+        const localCustomProducts = localProducts.filter(
+          p => (!defaultIds.has(p.id) || p.merchantPhone) && !deletedIds.includes(p.id)
+        );
+
+        // 4. Merge server products with local custom products
+        const mergedCustomProducts = [...serverProducts].filter(p => !deletedIds.includes(p.id));
+        const serverProductIds = new Set(serverProducts.map((p: any) => p.id));
+
+        localCustomProducts.forEach((lp: Product) => {
+          if (!serverProductIds.has(lp.id)) {
+            mergedCustomProducts.push(lp);
           }
         });
-        setProducts(merged);
-        localStorage.setItem("zshop_bd_products_v1", JSON.stringify(merged));
+
+        // 5. Merge all custom products with default PRODUCTS to form the full UI list
+        const mergedAll = [...PRODUCTS];
+        mergedCustomProducts.forEach((mp: Product) => {
+          const index = mergedAll.findIndex(p => p.id === mp.id);
+          if (index !== -1) {
+            mergedAll[index] = mp;
+          } else {
+            mergedAll.unshift(mp);
+          }
+        });
+
+        setProducts(mergedAll);
+        localStorage.setItem("zshop_bd_products_v1", JSON.stringify(mergedAll));
+
+        // 6. If there are custom products in localStorage that the server was missing, sync them back to the server
+        if (mergedCustomProducts.length > serverProducts.length) {
+          fetch("/api/admin/products/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ products: mergedCustomProducts })
+          }).catch(err => console.error("Restore server products failed:", err));
+        }
       }
     } catch (err) {
       console.error("Failed to load products from server:", err);
