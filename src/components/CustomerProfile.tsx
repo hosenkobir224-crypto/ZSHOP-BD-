@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { Order, Product } from "../types";
 import { PRODUCTS } from "../data";
+import { compressImage } from "../lib/utils";
 
 export interface CustomerSession {
   phone: string;
@@ -176,6 +177,7 @@ export default function CustomerProfile({
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [wishlistVersion, setWishlistVersion] = useState(0);
 
   // ==================== Merchant Custom Dashboard States ====================
   const [forumOrderId, setForumOrderId] = useState("");
@@ -255,6 +257,17 @@ export default function CustomerProfile({
         // Load searches
         const searchesRaw = localStorage.getItem(`zshop_bd_user_searches_${sessionObj.phone}`);
         setUserSearches(searchesRaw ? JSON.parse(searchesRaw) : []);
+
+        // Fetch all products for dynamic wishlist
+        try {
+          const res = await fetch("/api/products");
+          const d = await res.json();
+          if (d.success) {
+            setAllProducts(d.products || []);
+          }
+        } catch (e) {
+          console.error("Error loading products for customer:", e);
+        }
       } else {
         setActiveCustomer(null);
         setActiveMerchant(null);
@@ -297,6 +310,17 @@ export default function CustomerProfile({
     }
   }, [isOpen, activeCustomer]);
 
+  // Synchronize customer wishlist
+  useEffect(() => {
+    if (isOpen) {
+      const handleWishlistSync = () => {
+        setWishlistVersion(v => v + 1);
+      };
+      window.addEventListener("zshop_bd_wishlist_update", handleWishlistSync);
+      return () => window.removeEventListener("zshop_bd_wishlist_update", handleWishlistSync);
+    }
+  }, [isOpen]);
+
   // Fetch Merchant Products and Global Orders
   const fetchMerchantData = async (phone: string) => {
     try {
@@ -330,13 +354,12 @@ export default function CustomerProfile({
   const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("ইমেজ সাইজ অত্যন্ত বড়! দয়া করে ২ মেগাবাইটের নিচের ফাইল দিন।");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
+      reader.onloadend = async () => {
+        let base64 = reader.result as string;
+        // Compress avatar image (avatar is smaller, e.g. max 300x300 for optimal performance)
+        base64 = await compressImage(base64, 300, 300, 0.6);
+
         if (userType === "customer") {
           setRegAvatar(base64);
           if (activeCustomer) {
@@ -384,14 +407,13 @@ export default function CustomerProfile({
   const handleProductPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2.5 * 1024 * 1024) {
-        alert("ছবির সাইজ অত্যন্ত বড়! দয়া করে ২.৫ মেগাবাইটের নিচের ছবি আপলোড করুন।");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProdImage(reader.result as string);
-        setProdImages([reader.result as string]);
+      reader.onloadend = async () => {
+        let base64 = reader.result as string;
+        // Compress product image
+        base64 = await compressImage(base64, 800, 800, 0.7);
+        setProdImage(base64);
+        setProdImages([base64]);
       };
       reader.readAsDataURL(file);
     }
@@ -402,14 +424,12 @@ export default function CustomerProfile({
     const files = e.target.files;
     if (files) {
       Array.from(files).forEach((file: File) => {
-        if (file.size > 15 * 1024 * 1024) {
-          alert(`"${file.name}" ফাইল সাইজ অনেক বড়! ১৫ মেগাবাইটের নিচের ফাইল আপলোড করুন।`);
-          return;
-        }
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const resultStr = reader.result as string;
+        reader.onloadend = async () => {
+          let resultStr = reader.result as string;
           if (file.type.startsWith("image/")) {
+            // Compress product image
+            resultStr = await compressImage(resultStr, 800, 800, 0.7);
             setProdImages((prev) => [...prev, resultStr]);
           } else if (file.type.startsWith("video/")) {
             setProdVideos((prev) => [...prev, resultStr]);
@@ -986,6 +1006,13 @@ export default function CustomerProfile({
     ? clientOrders.filter(ord => ord.phone.replace(/\s+/g, "") === (activeCustomer?.phone || ""))
     : [];
 
+  const currentWishlist = (allProducts.length > 0 ? allProducts : PRODUCTS).filter(
+    p => localStorage.getItem(`zshop_bd_wishlist_${p.id}`) === "true"
+  );
+
+  const sortedCustomerOrders = [...activeOrders].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const latestCustomerOrder = sortedCustomerOrders[0] || null;
+
   // Filter orders related to this active merchant's products
   const connectedMerchantOrders = userType === "merchant" && activeMerchant
     ? serverOrders.filter(ord => 
@@ -1477,7 +1504,7 @@ export default function CustomerProfile({
                               <div className="space-y-0.5">
                                 <span className="block text-slate-700 text-[10px] font-bold uppercase tracking-wider">Total Orders</span>
                                 <p className="text-3xl font-black text-slate-950 tracking-tight font-sans">
-                                  {Math.max(5, activeOrders.length).toString().padStart(2, '0')}
+                                  {activeOrders.length.toString().padStart(2, '0')}
                                 </p>
                               </div>
                               <div className="p-2.5 bg-white/45 rounded-lg shrink-0 text-slate-700">
@@ -1489,8 +1516,17 @@ export default function CustomerProfile({
                             <div className="bg-[#EFE9DB] border border-[#E3DABF] rounded-2xl p-5 flex justify-between items-center relative overflow-hidden shadow-2xs">
                               <div className="space-y-0.5">
                                 <span className="block text-slate-705 text-[10px] font-bold uppercase tracking-wider">Recent Order</span>
-                                <p className="text-lg font-black text-slate-950 tracking-wide font-mono">#202606A</p>
-                                <span className="inline-block text-[10px] font-mono font-bold text-slate-650">Shipped</span>
+                                {latestCustomerOrder ? (
+                                  <>
+                                    <p className="text-lg font-black text-slate-950 tracking-wide font-mono">#{latestCustomerOrder.id}</p>
+                                    <span className="inline-block text-[10px] font-mono font-bold text-slate-650">{latestCustomerOrder.status}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <p className="text-sm font-bold text-slate-500 font-sans">None</p>
+                                    <span className="inline-block text-[10px] font-mono font-bold text-slate-400">No orders yet</span>
+                                  </>
+                                )}
                               </div>
                               <div className="p-2.5 bg-white/45 rounded-lg shrink-0 text-slate-700">
                                 <ArrowUpRight className="w-5 h-5" />
@@ -1501,7 +1537,7 @@ export default function CustomerProfile({
                             <div className="bg-[#E3DCF1] border border-[#D5CBEF] rounded-2xl p-5 flex justify-between items-center relative overflow-hidden shadow-2xs">
                               <div className="space-y-0.5">
                                 <span className="block text-slate-700 text-[10px] font-bold uppercase tracking-wider">Wishlist Items</span>
-                                <p className="text-3xl font-black text-slate-950 tracking-tight font-sans">12</p>
+                                <p className="text-3xl font-black text-slate-950 tracking-tight font-sans">{currentWishlist.length}</p>
                               </div>
                               <div className="p-2.5 bg-white/45 rounded-lg shrink-0 text-[#9A81E4]">
                                 <Heart className="w-5 h-5 fill-current" />
@@ -1533,42 +1569,60 @@ export default function CustomerProfile({
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 align-middle">
-                                  {/* High fidelity design table rows matching image */}
-                                  {[
-                                    { id: "#202606A", date: "07/07/2023", status: "Shipped", total: "৳10,500" },
-                                    { id: "#202606A", date: "07/07/2023", status: "Completed", total: "৳7,500" },
-                                    { id: "#202606A", date: "10/07/2023", status: "Completed", total: "৳16,000" },
-                                    { id: "#202606A", date: "13/07/2023", status: "Completed", total: "৳20.00" }
-                                  ].map((row, index) => (
-                                    <tr key={index} className="hover:bg-[#FAFAFA] transition-colors">
-                                      <td className="py-3.5 font-mono font-bold text-slate-800">{row.id}</td>
-                                      <td className="py-3.5 text-gray-500 font-mono text-[11px]">{row.date}</td>
-                                      <td className="py-3.5">
-                                        {row.status === "Shipped" ? (
-                                          <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-[11px]">
-                                            <Truck className="w-4 h-4 shrink-0 text-emerald-500" />
-                                            <span>Shipped</span>
-                                          </span>
-                                        ) : (
-                                          <span className="inline-flex items-center gap-1.5 text-[#529e72] font-bold text-[11px]">
-                                            <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
-                                            <span>Completed</span>
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="py-3.5 font-bold text-slate-900 font-mono">{row.total}</td>
-                                      <td className="py-3.5 text-right">
-                                        <div className="flex items-center justify-end gap-1.5">
-                                          <button className="p-1 px-1.5 bg-slate-50 hover:bg-slate-100 border border-gray-200 rounded-lg text-slate-600 shrink-0 cursor-pointer" title="Edit/View Order">
-                                            <Edit2 className="w-3 h-3" />
-                                          </button>
-                                          <button className="p-1 px-1.5 bg-slate-50 hover:bg-red-50 hover:text-red-650 border border-gray-200 rounded-lg text-slate-500 shrink-0 cursor-pointer text-red-500" title="Delete Order">
-                                            <Trash2 className="w-3 h-3" />
-                                          </button>
+                                  {sortedCustomerOrders.length === 0 ? (
+                                    <tr>
+                                      <td colSpan={5} className="py-8 text-center text-slate-450">
+                                        <div className="space-y-1">
+                                          <p className="font-bold text-slate-700">আপনি এখনো কোনো নতুন অর্ডার করেননি</p>
+                                          <p className="text-[10px]">আমাদের পণ্য তালিকা থেকে পছন্দের আইটেমটি কিনে নিন!</p>
                                         </div>
                                       </td>
                                     </tr>
-                                  ))}
+                                  ) : (
+                                    sortedCustomerOrders.slice(0, 4).map((ord) => (
+                                      <tr key={ord.id} className="hover:bg-[#FAFAFA] transition-colors">
+                                        <td className="py-3.5 font-mono font-bold text-slate-800">#{ord.id}</td>
+                                        <td className="py-3.5 text-gray-500 font-mono text-[11px]">
+                                          {new Date(ord.timestamp).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </td>
+                                        <td className="py-3.5">
+                                          {ord.status === "Pending" ? (
+                                            <span className="inline-flex items-center gap-1.5 text-amber-600 font-bold text-[11px]">
+                                              <Clock className="w-4 h-4 shrink-0 text-amber-500" />
+                                              <span>Pending</span>
+                                            </span>
+                                          ) : ord.status === "Shipped" ? (
+                                            <span className="inline-flex items-center gap-1.5 text-blue-600 font-bold text-[11px]">
+                                              <Truck className="w-4 h-4 shrink-0 text-blue-500" />
+                                              <span>Shipped</span>
+                                            </span>
+                                          ) : ord.status === "Cancelled" ? (
+                                            <span className="inline-flex items-center gap-1.5 text-rose-600 font-bold text-[11px]">
+                                              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                                              <span>Cancelled</span>
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-[11px]">
+                                              <CheckCircle className="w-4 h-4 shrink-0 text-[#10b981]" />
+                                              <span>{ord.status}</span>
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-3.5 font-bold text-slate-900 font-mono">৳{formatBDT(ord.total)}</td>
+                                        <td className="py-3.5 text-right">
+                                          <div className="flex items-center justify-end gap-1.5">
+                                            <button 
+                                              onClick={() => setCustomerTab("orders")}
+                                              className="p-1 px-1.5 bg-slate-50 hover:bg-slate-100 border border-gray-200 rounded-lg text-slate-600 shrink-0 cursor-pointer" 
+                                              title="Track / View Order Details"
+                                            >
+                                              <Eye className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    ))
+                                  )}
                                 </tbody>
                               </table>
                             </div>
@@ -1637,6 +1691,17 @@ export default function CustomerProfile({
                                           setCustEmail(editEmail);
                                           setIsEditingContact(false);
                                           window.dispatchEvent(new Event("active_customer_navbar_sync"));
+
+                                          // Sync changes to server
+                                          fetch("/api/customers/update-profile", {
+                                            method: "POST",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({
+                                              phone: activeCustomer.phone,
+                                              name: editName,
+                                              email: editEmail
+                                            })
+                                          }).catch(err => console.error("Error updating customer profile on server:", err));
                                         }}
                                         className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors cursor-pointer"
                                       >
@@ -1683,6 +1748,18 @@ export default function CustomerProfile({
                                           localStorage.setItem("zshop_bd_customer_address_v1", editAddress);
                                           setCustAddress(editAddress);
                                           setIsEditingAddress(false);
+
+                                          // Sync changes to server
+                                          if (activeCustomer) {
+                                            fetch("/api/customers/update-profile", {
+                                              method: "POST",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({
+                                                phone: activeCustomer.phone,
+                                                address: editAddress
+                                              })
+                                            }).catch(err => console.error("Error updating customer address on server:", err));
+                                          }
                                         }}
                                         className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest rounded-xl transition-colors cursor-pointer"
                                       >
@@ -1723,83 +1800,42 @@ export default function CustomerProfile({
                             
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               
-                              {/* Product 1: Luxury Watch B */}
-                              <div className="border border-gray-150 rounded-2xl p-3.5 flex flex-col justify-between space-y-3 bg-white hover:shadow-xs transition-shadow">
-                                <div className="w-full h-32 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center relative">
-                                  <img 
-                                    referrerPolicy="no-referrer"
-                                    src="https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600" 
-                                    alt="Luxury Watch B" 
-                                    className="w-full h-full object-cover"
-                                  />
+                              {currentWishlist.length === 0 ? (
+                                <div className="col-span-full py-8 text-center text-slate-400 space-y-2 bg-[#FAFAFA] border border-dashed border-gray-200 rounded-2xl">
+                                  <Heart className="w-8 h-8 text-slate-300 mx-auto" />
+                                  <div className="space-y-0.5">
+                                    <p className="font-bold text-slate-700 text-xs">আপনার প্রিয় তালিকাটি খালি রয়েছে</p>
+                                    <p className="text-[10px]">আমাদের পণ্যগুলোতে হার্ট আইকন ক্লিক করে এখানে যোগ করুন!</p>
+                                  </div>
                                 </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-xs font-extrabold text-slate-950 truncate font-sans">Luxury Watch B</p>
-                                </div>
-                                <button 
-                                  onClick={() => {
-                                    const prod = PRODUCTS.find(p => p.id === "wt-1") || PRODUCTS[0];
-                                    if (prod && onAddToCart) {
-                                      onAddToCart(prod);
-                                    }
-                                  }}
-                                  className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
-                                >
-                                  Add to Cart
-                                </button>
-                              </div>
-
-                              {/* Product 2: Georgette Kurti Red */}
-                              <div className="border border-gray-150 rounded-2xl p-3.5 flex flex-col justify-between space-y-3 bg-white hover:shadow-xs transition-shadow">
-                                <div className="w-full h-32 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center relative">
-                                  <img 
-                                    referrerPolicy="no-referrer"
-                                    src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=600" 
-                                    alt="Georgette Kurti Red" 
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-xs font-extrabold text-slate-950 truncate font-sans">Georgette Kurti Red</p>
-                                </div>
-                                <button 
-                                  onClick={() => {
-                                    const prod = PRODUCTS.find(p => p.id === "cl-3") || PRODUCTS[0];
-                                    if (prod && onAddToCart) {
-                                      onAddToCart(prod);
-                                    }
-                                  }}
-                                  className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
-                                >
-                                  Add to Cart
-                                </button>
-                              </div>
-
-                              {/* Product 3: Headphones X */}
-                              <div className="border border-gray-150 rounded-2xl p-3.5 flex flex-col justify-between space-y-3 bg-white hover:shadow-xs transition-shadow">
-                                <div className="w-full h-32 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center relative">
-                                  <img 
-                                    referrerPolicy="no-referrer"
-                                    src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600" 
-                                    alt="Headphones X" 
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-xs font-extrabold text-slate-950 truncate font-sans">Headphones X</p>
-                                </div>
-                                <button 
-                                  onClick={() => {
-                                    const prod = PRODUCTS.find(p => p.id === "el-1") || PRODUCTS[0];
-                                    if (prod && onAddToCart) {
-                                      onAddToCart(prod);
-                                    }
-                                  }}
-                                  className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
-                                >
-                                  Add to Cart
-                                </button>
-                              </div>
+                              ) : (
+                                currentWishlist.slice(0, 3).map((prod) => (
+                                  <div key={prod.id} className="border border-gray-150 rounded-2xl p-3.5 flex flex-col justify-between space-y-3 bg-white hover:shadow-xs transition-shadow">
+                                    <div className="w-full h-32 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center relative">
+                                      <img 
+                                        referrerPolicy="no-referrer"
+                                        src={prod.image} 
+                                        alt={prod.name} 
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <p className="text-xs font-extrabold text-slate-950 truncate font-sans">{prod.name}</p>
+                                      <p className="text-[11px] font-bold text-emerald-605 font-mono">৳{formatBDT(prod.price)}</p>
+                                    </div>
+                                    <button 
+                                      onClick={() => {
+                                        if (prod && onAddToCart) {
+                                          onAddToCart(prod);
+                                        }
+                                      }}
+                                      className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
+                                    >
+                                      Add to Cart
+                                    </button>
+                                  </div>
+                                ))
+                              )}
 
                             </div>
                           </div>
@@ -1993,41 +2029,45 @@ export default function CustomerProfile({
                             </h4>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {/* Detailed product item list */}
-                            {[
-                              { id: "wt-1", name: "Luxury Watch B", image: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?auto=format&fit=crop&q=80&w=600", price: 12500, label: "Premium Leather Chronograph" },
-                              { id: "cl-3", name: "Georgette Kurti Red", image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=600", price: 4200, label: "Beautiful Traditional Festival 3-Piece" },
-                              { id: "el-1", name: "Headphones X", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=600", price: 6500, label: "ANC High Definition Acoustic Audio" }
-                            ].map((prod) => (
-                              <div key={prod.id} className="border border-gray-200.5 rounded-2xl p-3 bg-white flex flex-col justify-between space-y-3.5 hover:shadow-xs transition-shadow">
-                                <div className="relative w-full h-36 bg-[#FAFAFA] rounded-xl overflow-hidden">
-                                  <img 
-                                    referrerPolicy="no-referrer"
-                                    src={prod.image} 
-                                    alt={prod.name} 
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                <div className="space-y-1">
-                                  <h5 className="text-xs font-black text-slate-950 font-sans tracking-tight">{prod.name}</h5>
-                                  <p className="text-[10px] text-gray-400 font-medium line-clamp-1">{prod.label}</p>
-                                  <p className="text-xs font-black text-amber-600 font-mono">৳{formatBDT(prod.price)}</p>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    const actual = PRODUCTS.find(p=>p.id === prod.id) || PRODUCTS[0];
-                                    if (actual && onAddToCart) {
-                                      onAddToCart(actual);
-                                    }
-                                  }}
-                                  className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
-                                >
-                                  Add to Cart
-                                </button>
+                          {currentWishlist.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 space-y-3 bg-[#FAFAFA] border border-dashed border-gray-200 rounded-2xl">
+                              <Heart className="w-10 h-10 text-slate-300 mx-auto animate-pulse" />
+                              <div className="space-y-1">
+                                <p className="font-bold text-slate-700 text-sm">আপনার প্রিয় পণ্য তালিকাটি খালি রয়েছে</p>
+                                <p className="text-xs">আমাদের পণ্য তালিকা থেকে যেকোনো পণ্যের হার্ট আইকনে ক্লিক করে প্রিয় তালিকায় যোগ করুন!</p>
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                              {currentWishlist.map((prod) => (
+                                <div key={prod.id} className="border border-gray-200.5 rounded-2xl p-3 bg-white flex flex-col justify-between space-y-3.5 hover:shadow-xs transition-shadow">
+                                  <div className="relative w-full h-36 bg-[#FAFAFA] rounded-xl overflow-hidden">
+                                    <img 
+                                      referrerPolicy="no-referrer"
+                                      src={prod.image} 
+                                      alt={prod.name} 
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <h5 className="text-xs font-black text-slate-950 font-sans tracking-tight">{prod.name}</h5>
+                                    <p className="text-[10px] text-gray-400 font-medium line-clamp-1">{prod.category || "Premium Quality Product"}</p>
+                                    <p className="text-xs font-black text-amber-605 font-mono">৳{formatBDT(prod.price)}</p>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      if (prod && onAddToCart) {
+                                        onAddToCart(prod);
+                                      }
+                                    }}
+                                    className="w-full py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors uppercase tracking-wider"
+                                  >
+                                    Add to Cart
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
 

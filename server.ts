@@ -7,76 +7,234 @@ import { GoogleGenAI, Type } from "@google/genai";
 const app = express();
 const PORT = 3000;
 const DB_FILE = path.join(process.cwd(), "db.json");
+const DB_BACKUP_FILE = path.join(process.cwd(), "db.json.bak");
 
 // Middleware to parse large JSON (since merchants upload base64 images of products)
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
+let dbCache: any = null;
+
+function cleanHugeImages(db: any) {
+  let cleanedCount = 0;
+  const fallbackImg = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600";
+  
+  if (db.products && Array.isArray(db.products)) {
+    db.products.forEach((p: any) => {
+      if (p.image && p.image.startsWith("data:image/") && p.image.length > 300000) {
+        p.image = fallbackImg;
+        cleanedCount++;
+      }
+      if (p.images && Array.isArray(p.images)) {
+        p.images = p.images.map((img: any) => {
+          if (img && img.startsWith("data:image/") && img.length > 300000) {
+            cleanedCount++;
+            return fallbackImg;
+          }
+          return img;
+        });
+      }
+    });
+  }
+  
+  if (db.orders && Array.isArray(db.orders)) {
+    db.orders.forEach((o: any) => {
+      if (o.cartItems && Array.isArray(o.cartItems)) {
+        o.cartItems.forEach((item: any) => {
+          if (item.image && item.image.startsWith("data:image/") && item.image.length > 300000) {
+            item.image = fallbackImg;
+            cleanedCount++;
+          }
+        });
+      }
+    });
+  }
+  
+  if (cleanedCount > 0) {
+    console.log(`Cleaned up ${cleanedCount} excessively large base64 images from database.`);
+  }
+}
+
 // Helper to load/save JSON database
 function getDB() {
-  try {
-    if (!fs.existsSync(DB_FILE)) {
-      const defaultState = {
-        products: [],
-        orders: [],
-        customers: [],
-        merchants: [],
-        affiliates: [],
-        visits: { total: 0, daily: {} },
-        settings: {
-          logoText: "ZSHOP",
-          logoSuffix: "BD",
-          logoSlogan: "Retail Revolution",
-          logoType: "text",
-          logoImage: "",
-          primaryColor: "#f85606",
-          primaryFaintColor: "#fff2ed"
-        }
-      };
-      fs.writeFileSync(DB_FILE, JSON.stringify(defaultState, null, 2));
-      return defaultState;
-    }
-    const content = fs.readFileSync(DB_FILE, "utf-8");
-    const parsed = JSON.parse(content);
-    if (!parsed.affiliates) {
-      parsed.affiliates = [];
-    }
-    if (!parsed.visits) {
-      parsed.visits = { total: 0, daily: {} };
-    }
-    if (!parsed.productViews) {
-      parsed.productViews = {};
-    }
-    if (!parsed.settings) {
-      parsed.settings = {
-        logoText: "ZSHOP",
-        logoSuffix: "BD",
-        logoSlogan: "Retail Revolution",
-        logoType: "text",
-        logoImage: "",
-        primaryColor: "#f85606",
-        primaryFaintColor: "#fff2ed"
-      };
-    }
-    return parsed;
-  } catch (error) {
-    console.error("Error reading database file:", error);
-    return {
-      products: [],
-      orders: [],
-      customers: [],
-      merchants: [],
-      affiliates: [],
-      visits: { total: 0, daily: {} }
-    };
+  if (dbCache) {
+    return dbCache;
   }
+
+  const defaultState = {
+    products: [],
+    orders: [],
+    customers: [],
+    merchants: [],
+    affiliates: [],
+    visits: { total: 0, daily: {} },
+    settings: {
+      logoText: "ZSHOP",
+      logoSuffix: "BD",
+      logoSlogan: "Retail Revolution",
+      logoType: "text",
+      logoImage: "",
+      primaryColor: "#f85606",
+      primaryFaintColor: "#fff2ed"
+    }
+  };
+
+  const loadFromFile = (filePath: string) => {
+    if (!fs.existsSync(filePath)) return null;
+    try {
+      const content = fs.readFileSync(filePath, "utf-8");
+      if (!content || content.trim() === "") return null;
+      const parsed = JSON.parse(content);
+      return parsed;
+    } catch (e) {
+      console.error(`Error reading database from ${filePath}:`, e);
+      return null;
+    }
+  };
+
+  // Try loading from main database file
+  let db = loadFromFile(DB_FILE);
+
+  // If failed, try loading from backup database file
+  if (!db) {
+    console.log("Attempting to restore from backup database file...");
+    db = loadFromFile(DB_BACKUP_FILE);
+  }
+
+  // If both failed or files don't exist, use default state
+  if (!db) {
+    console.log("No database found, initializing default state...");
+    db = defaultState;
+    try {
+      fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2));
+      fs.writeFileSync(DB_BACKUP_FILE, JSON.stringify(db, null, 2));
+    } catch (e) {
+      console.error("Failed to initialize database files on disk:", e);
+    }
+  }
+
+  // Ensure all required fields exist
+  if (!db.products) db.products = [];
+  if (!db.orders) db.orders = [];
+  if (!db.customers) db.customers = [];
+  if (!db.merchants) db.merchants = [];
+  if (!db.affiliates) db.affiliates = [];
+  if (!db.visits) db.visits = { total: 0, daily: {} };
+  if (!db.productViews) db.productViews = {};
+  if (!db.settings) {
+    db.settings = defaultState.settings;
+  }
+
+  // Auto-clean any huge base64 images that bloat the database
+  cleanHugeImages(db);
+
+  dbCache = db;
+  return dbCache;
 }
 
 function saveDB(data: any) {
   try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
+    dbCache = data;
+    const jsonStr = JSON.stringify(data, null, 2);
+    
+    // Write to main database file
+    fs.writeFileSync(DB_FILE, jsonStr);
+    
+    // Write to backup database file
+    fs.writeFileSync(DB_BACKUP_FILE, jsonStr);
+
+    // Save to Cloud backup asynchronously
+    saveDBToCloud(data);
   } catch (error) {
-    console.error("Error writing database file:", error);
+    console.error("Error writing database files:", error);
+  }
+}
+
+const CLOUD_URL = "https://kvdb.io/zshopbd_cb63ab94a038405fadbf/db_state_v1";
+
+async function saveDBToCloud(data: any) {
+  try {
+    const dataToBackup = {
+      customers: data.customers || [],
+      merchants: data.merchants || [],
+      affiliates: data.affiliates || [],
+      products: data.products || [],
+      orders: data.orders || [],
+      settings: data.settings || {}
+    };
+
+    const response = await fetch(CLOUD_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(dataToBackup)
+    });
+
+    if (response.ok) {
+      console.log("Database successfully backed up to Cloud!");
+    } else {
+      console.error("Failed to backup database to Cloud:", response.statusText);
+    }
+  } catch (err) {
+    console.error("Cloud backup error:", err);
+  }
+}
+
+async function restoreFromCloud() {
+  console.log("Fetching database backup from Cloud...");
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6 seconds timeout
+
+    const res = await fetch(CLOUD_URL, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const cloudData = await res.json();
+      if (cloudData && typeof cloudData === "object") {
+        console.log("Successfully restored database from Cloud!");
+        
+        // Load local DB
+        const localDB = getDB();
+        
+        // Merge cloud data with current local db cache
+        // Merge customers (by phone)
+        const existingCustPhones = new Set((localDB.customers || []).map((c: any) => c.phone));
+        const newCustomers = (cloudData.customers || []).filter((c: any) => c && c.phone && !existingCustPhones.has(c.phone));
+        localDB.customers = [...(localDB.customers || []), ...newCustomers];
+
+        // Merge merchants (by phone)
+        const existingMerchPhones = new Set((localDB.merchants || []).map((m: any) => m.phone));
+        const newMerchants = (cloudData.merchants || []).filter((m: any) => m && m.phone && !existingMerchPhones.has(m.phone));
+        localDB.merchants = [...(localDB.merchants || []), ...newMerchants];
+
+        // Merge affiliates (by phone)
+        const existingAffPhones = new Set((localDB.affiliates || []).map((a: any) => a.phone));
+        const newAffiliates = (cloudData.affiliates || []).filter((a: any) => a && a.phone && !existingAffPhones.has(a.phone));
+        localDB.affiliates = [...(localDB.affiliates || []), ...newAffiliates];
+
+        // Merge products (by id)
+        const existingProdIds = new Set((localDB.products || []).map((p: any) => String(p.id)));
+        const newProducts = (cloudData.products || []).filter((p: any) => p && p.id && !existingProdIds.has(String(p.id)));
+        localDB.products = [...(localDB.products || []), ...newProducts];
+
+        // Merge orders (by id)
+        const existingOrderIds = new Set((localDB.orders || []).map((o: any) => String(o.id)));
+        const newOrders = (cloudData.orders || []).filter((o: any) => o && o.id && !existingOrderIds.has(String(o.id)));
+        localDB.orders = [...(localDB.orders || []), ...newOrders];
+
+        // Save merged DB back to file and memory
+        // Save to file without triggering double cloud write
+        dbCache = localDB;
+        const jsonStr = JSON.stringify(localDB, null, 2);
+        fs.writeFileSync(DB_FILE, jsonStr);
+        fs.writeFileSync(DB_BACKUP_FILE, jsonStr);
+        console.log("Cloud and local databases synchronized perfectly!");
+      }
+    } else {
+      console.log("No database backup found on Cloud yet.");
+    }
+  } catch (err: any) {
+    console.error("Failed to restore from Cloud:", err.message);
   }
 }
 
@@ -714,6 +872,32 @@ app.post("/api/merchants/update-profile", (req, res) => {
   }
 });
 
+// 10e-3. Customer - Update Profile Settings (Name, Email, Address)
+app.post("/api/customers/update-profile", (req, res) => {
+  try {
+    const { phone, name, email, address } = req.body;
+    if (!phone) {
+      res.status(400).json({ success: false, message: "ফোন নম্বর আবশ্যক।" });
+      return;
+    }
+    const db = getDB();
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!db.customers) db.customers = [];
+    const customer = db.customers.find((c: any) => c.phone === cleanPhone);
+    if (!customer) {
+      res.status(404).json({ success: false, message: "গ্রাহক খুঁজে পাওয়া যায়নি।" });
+      return;
+    }
+    if (name !== undefined) customer.name = name;
+    if (email !== undefined) customer.email = email;
+    if (address !== undefined) customer.address = address;
+    saveDB(db);
+    res.json({ success: true, customer: { ...customer, password: undefined } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 10f. Affiliate - Update Avatar
 app.post("/api/affiliates/update-avatar", (req, res) => {
   try {
@@ -882,6 +1066,26 @@ app.get("/api/admin/accounts", (req, res) => {
   }
 });
 
+app.post("/api/admin/accounts/sync", (req, res) => {
+  try {
+    const { customers, merchants, affiliates } = req.body;
+    const db = getDB();
+    if (customers && Array.isArray(customers)) {
+      db.customers = customers;
+    }
+    if (merchants && Array.isArray(merchants)) {
+      db.merchants = merchants;
+    }
+    if (affiliates && Array.isArray(affiliates)) {
+      db.affiliates = affiliates;
+    }
+    saveDB(db);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ====================================================
 
 // ==================== SEO ROUTING ====================
@@ -971,6 +1175,8 @@ async function startServer() {
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
+    // Async restore from cloud storage backup
+    restoreFromCloud().catch(err => console.error("Async restore error:", err));
   });
 }
 

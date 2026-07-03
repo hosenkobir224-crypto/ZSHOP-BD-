@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { Product, BrandingSettings } from "../types";
 import { PRODUCTS } from "../data";
+import { compressImage } from "../lib/utils";
 
 interface Review {
   id: string;
@@ -520,8 +521,10 @@ export default function ProductDetailModal({
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setNewReviewPhoto(reader.result as string);
+    reader.onloadend = async () => {
+      let base64 = reader.result as string;
+      base64 = await compressImage(base64, 600, 600, 0.7);
+      setNewReviewPhoto(base64);
     };
     reader.readAsDataURL(file);
   };
@@ -543,8 +546,10 @@ export default function ProductDetailModal({
   const handleMediaFile = (file: File) => {
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewReviewPhoto(reader.result as string);
+      reader.onloadend = async () => {
+        let base64 = reader.result as string;
+        base64 = await compressImage(base64, 600, 600, 0.7);
+        setNewReviewPhoto(base64);
       };
       reader.readAsDataURL(file);
     } else if (file.type.startsWith("video/")) {

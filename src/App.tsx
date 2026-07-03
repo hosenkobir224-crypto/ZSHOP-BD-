@@ -210,11 +210,93 @@ export default function App() {
     }
   };
 
+  const fetchAndSyncAccounts = async () => {
+    try {
+      const res = await fetch("/api/admin/accounts");
+      const data = await res.json();
+      if (data.success) {
+        const localCustomersRaw = localStorage.getItem("zshop_bd_customers_v1");
+        const localMerchantsRaw = localStorage.getItem("zshop_bd_merchants_v1");
+        const localAffiliatesRaw = localStorage.getItem("zshop_bd_affiliates_v1");
+
+        let localCustomers: any[] = [];
+        let localMerchants: any[] = [];
+        let localAffiliates: any[] = [];
+
+        try {
+          localCustomers = localCustomersRaw ? JSON.parse(localCustomersRaw) : [];
+        } catch (e) {
+          console.error("Failed to parse local customers:", e);
+        }
+        try {
+          localMerchants = localMerchantsRaw ? JSON.parse(localMerchantsRaw) : [];
+        } catch (e) {
+          console.error("Failed to parse local merchants:", e);
+        }
+        try {
+          localAffiliates = localAffiliatesRaw ? JSON.parse(localAffiliatesRaw) : [];
+        } catch (e) {
+          console.error("Failed to parse local affiliates:", e);
+        }
+
+        const serverCustomerPhones = new Set((data.customers || []).map((c: any) => c.phone));
+        const serverMerchantPhones = new Set((data.merchants || []).map((m: any) => m.phone));
+        const serverAffiliatePhones = new Set((data.affiliates || []).map((a: any) => a.phone));
+
+        const mergedCustomers = [...(data.customers || [])];
+        localCustomers.forEach((lc: any) => {
+          if (lc && lc.phone && !serverCustomerPhones.has(lc.phone)) {
+            mergedCustomers.push(lc);
+          }
+        });
+
+        const mergedMerchants = [...(data.merchants || [])];
+        localMerchants.forEach((lm: any) => {
+          if (lm && lm.phone && !serverMerchantPhones.has(lm.phone)) {
+            mergedMerchants.push(lm);
+          }
+        });
+
+        const mergedAffiliates = [...(data.affiliates || [])];
+        localAffiliates.forEach((la: any) => {
+          if (la && la.phone && !serverAffiliatePhones.has(la.phone)) {
+            mergedAffiliates.push(la);
+          }
+        });
+
+        localStorage.setItem("zshop_bd_customers_v1", JSON.stringify(mergedCustomers));
+        localStorage.setItem("zshop_bd_merchants_v1", JSON.stringify(mergedMerchants));
+        localStorage.setItem("zshop_bd_affiliates_v1", JSON.stringify(mergedAffiliates));
+
+        const hasNewCustomers = mergedCustomers.length > (data.customers || []).length;
+        const hasNewMerchants = mergedMerchants.length > (data.merchants || []).length;
+        const hasNewAffiliates = mergedAffiliates.length > (data.affiliates || []).length;
+
+        if (hasNewCustomers || hasNewMerchants || hasNewAffiliates) {
+          await fetch("/api/admin/accounts/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              customers: mergedCustomers,
+              merchants: mergedMerchants,
+              affiliates: mergedAffiliates
+            })
+          });
+          // Dispatch to notify admin panel active views
+          window.dispatchEvent(new Event("zshop_bd_accounts_updated"));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch and sync accounts:", err);
+    }
+  };
+
   // Keep products state persistent and sync on mount
   useEffect(() => {
     fetchProducts();
     fetchOrders();
     fetchBrandingSettings();
+    fetchAndSyncAccounts();
 
     // Track uniquely per session
     if (!sessionStorage.getItem("zshop_visit_logged")) {
@@ -234,9 +316,14 @@ export default function App() {
       fetchBrandingSettings();
     };
 
+    const handleAccountsUpdate = () => {
+      fetchAndSyncAccounts();
+    };
+
     window.addEventListener("products_db_sync_update", fetchProducts);
     window.addEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
     window.addEventListener("zshop_bd_branding_updated", handleBrandingUpdate);
+    window.addEventListener("zshop_bd_accounts_updated", handleAccountsUpdate);
     
     // Auto-poll merchant items periodically (every 15s) so customer catalog stays updated reactively
     const pollInterval = setInterval(() => {
@@ -247,6 +334,7 @@ export default function App() {
       window.removeEventListener("products_db_sync_update", fetchProducts);
       window.removeEventListener("zshop_bd_pixel_config_updated", handlePixelConfigChange);
       window.removeEventListener("zshop_bd_branding_updated", handleBrandingUpdate);
+      window.removeEventListener("zshop_bd_accounts_updated", handleAccountsUpdate);
       clearInterval(pollInterval);
     };
   }, []);

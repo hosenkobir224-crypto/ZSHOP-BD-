@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { Product, Order, OrderItem, Promotion, BrandingSettings } from "../types";
 import { PROMOTIONS } from "../data";
+import { compressImage } from "../lib/utils";
 import { 
   getPixelConfig, 
   savePixelConfig, 
@@ -155,14 +156,11 @@ export default function AdminPanel({
   const handleBannerImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2.5 * 1024 * 1024) {
-        alert("ফাইলের সাইজ অনেক বড়! দয়া করে ২.৫ মেগাবাইটের চেয়ে ছোট ফাইল আপলোড করুন।");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         if (typeof reader.result === "string") {
-          setBannerImage(reader.result);
+          const compressed = await compressImage(reader.result, 1200, 600, 0.7);
+          setBannerImage(compressed);
         }
       };
       reader.readAsDataURL(file);
@@ -291,14 +289,11 @@ export default function AdminPanel({
   const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2.5 * 1024 * 1024) {
-        alert("ফাইলের সাইজ অনেক বড়! দয়া করে ২.৫ মেগাবাইটের চেয়ে ছোট ফাইল আপলোড করুন।");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         if (typeof reader.result === "string") {
-          setNewImage(reader.result);
+          const compressed = await compressImage(reader.result, 800, 800, 0.7);
+          setNewImage(compressed);
         }
       };
       reader.readAsDataURL(file);
@@ -346,14 +341,11 @@ export default function AdminPanel({
   const handleLogoImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 1 * 1024 * 1024) {
-        alert("লোগো ফাইলের সাইজ অনেক বড়! দয়া করে ১ মেগাবাইটের চেয়ে ছোট ইমেজ ফাইল আপলোড করুন।");
-        return;
-      }
       const reader = new FileReader();
-      reader.onloadend = () => {
+      reader.onloadend = async () => {
         if (typeof reader.result === "string") {
-          setLogoImage(reader.result);
+          const compressed = await compressImage(reader.result, 300, 100, 0.8);
+          setLogoImage(compressed);
         }
       };
       reader.readAsDataURL(file);
