@@ -10,7 +10,9 @@ import {
   Info,
   CheckCircle2,
   CalendarDays,
-  ShieldCheck
+  ShieldCheck,
+  Copy,
+  Check
 } from "lucide-react";
 import { CartItem } from "../types";
 import { trackPixelEvent } from "../lib/metaPixel";
@@ -74,6 +76,7 @@ export default function CartDrawer({
   const [cardCVV, setCardCVV] = useState("");
   const [cardName, setCardName] = useState("");
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [walletCopied, setWalletCopied] = useState(false);
   
   // Simulated Order Details
   const [placedOrder, setPlacedOrder] = useState<{
@@ -579,8 +582,25 @@ export default function CartDrawer({
                         <p className="text-[11px] font-bold text-slate-800 leading-tight capitalize">
                           {paymentMethod} পেমেন্ট নির্দেশনা:
                         </p>
-                        <p className="text-[10px] text-slate-500 mt-1 leading-normal">
-                          আমাদের পার্সোনাল ওয়ালেট নম্বর <strong>01712-345678</strong>-এ টাকা পাঠিয়ে (Send Money) নিচের বক্সে সঠিক তথ্য দিন।
+                        <p className="text-[10px] text-slate-500 mt-1 leading-normal flex flex-wrap items-center gap-1.5">
+                          <span>আমাদের পার্সোনাল ওয়ালেট নম্বর</span>
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-slate-200/60 text-slate-900 rounded font-bold font-mono text-[10px] shadow-2xs border border-gray-300">
+                            01712-345678
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText("01712345678");
+                                setWalletCopied(true);
+                                setTimeout(() => setWalletCopied(false), 2000);
+                              }}
+                              className="text-slate-500 hover:text-slate-850 active:scale-95 cursor-pointer ml-0.5 focus:outline-none"
+                              title="কপি করুন"
+                            >
+                              {walletCopied ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                            </button>
+                          </span>
+                          {walletCopied && <span className="text-[9px] text-emerald-600 font-bold font-sans animate-bounce">(কপি হয়েছে!)</span>}
+                          <span>-এ টাকা পাঠিয়ে (Send Money) নিচের বক্সে সঠিক তথ্য দিন।</span>
                         </p>
                       </div>
                     </div>

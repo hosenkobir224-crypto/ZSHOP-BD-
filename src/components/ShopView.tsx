@@ -11,6 +11,7 @@ interface ShopViewProps {
   onOrderNow?: (product: Product) => void;
   onOpenQuickView: (product: Product) => void;
   branding?: BrandingSettings;
+  isDetailModalOpen?: boolean;
 }
 
 export default function ShopView({
@@ -21,9 +22,25 @@ export default function ShopView({
   onOrderNow,
   onOpenQuickView,
   branding,
+  isDetailModalOpen = false,
 }: ShopViewProps) {
   const [sortBy, setSortBy] = useState<string>("popular");
   const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const isVerified = useMemo(() => {
+    if (shopName.toLowerCase() === "zshop bd") return true;
+    try {
+      const saved = localStorage.getItem("zshop_bd_merchants_v1");
+      if (saved) {
+        const merchants = JSON.parse(saved);
+        const found = merchants.find((m: any) => m.shopName && m.shopName.toLowerCase() === shopName.toLowerCase());
+        return found ? !!found.isVerified : false;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return false;
+  }, [shopName]);
 
   // Filter products for this specific merchant shop
   const shopProducts = useMemo(() => {
@@ -113,12 +130,20 @@ export default function ShopView({
               
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-extrabold text-slate-950 text-xl sm:text-2xl tracking-tight leading-none">{shopName}</h1>
-                  <span className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
+                  {isDetailModalOpen ? (
+                    <h2 className="font-extrabold text-slate-950 text-xl sm:text-2xl tracking-tight leading-none">{shopName}</h2>
+                  ) : (
+                    <h1 className="font-extrabold text-slate-950 text-xl sm:text-2xl tracking-tight leading-none">{shopName}</h1>
+                  )}
+                  {isVerified && (
+                    <span className="w-5 h-5 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
+                  )}
                 </div>
-                <span className="text-xs text-gray-400 mt-1 font-semibold leading-none">Verified Merchant</span>
+                <span className="text-xs text-gray-400 mt-1 font-semibold leading-none">
+                  {isVerified ? "Verified Merchant" : "Standard Seller Partner"}
+                </span>
                 <span className="text-xs text-slate-600 mt-2 font-semibold bg-gray-50 border border-gray-100 px-3 py-1 rounded-full inline-block w-fit">
-                  {shopName === "ZSHOP BD" ? "Digital & Fashion Retailer" : "Verified Store Partner"}
+                  {shopName === "ZSHOP BD" ? "Digital & Fashion Retailer" : isVerified ? "Verified Store Partner" : "Store Partner"}
                 </span>
               </div>
             </div>

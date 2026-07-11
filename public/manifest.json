@@ -1,0 +1,21 @@
+{
+  "short_name": "ZSHOP BD",
+  "name": "ZSHOP BD | Online Shopping Bangladesh",
+  "icons": [
+    {
+      "src": "https://images.unsplash.com/photo-1472851294608-062f824d296e?q=80&w=192&auto=format&fit=crop",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://images.unsplash.com/photo-1472851294608-062f824d296e?q=80&w=512&auto=format&fit=crop",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#f85606",
+  "display": "standalone",
+  "orientation": "portrait"
+}

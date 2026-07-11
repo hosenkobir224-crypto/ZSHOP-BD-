@@ -555,7 +555,8 @@ app.post("/api/merchants/register", (req, res) => {
         phone: newMerchant.phone,
         avatar: newMerchant.avatar,
         address: newMerchant.address,
-        facebookUrl: ""
+        facebookUrl: "",
+        isVerified: false
       }
     });
   } catch (err: any) {
@@ -592,7 +593,8 @@ app.post("/api/merchants/login", (req, res) => {
         phone: foundMerchant.phone,
         avatar: foundMerchant.avatar || "",
         address: foundMerchant.address || "",
-        facebookUrl: foundMerchant.facebookUrl || ""
+        facebookUrl: foundMerchant.facebookUrl || "",
+        isVerified: foundMerchant.isVerified || false
       },
       products: merchantProducts
     });
@@ -898,6 +900,130 @@ app.post("/api/customers/update-profile", (req, res) => {
   }
 });
 
+// 10e-4. Customer - Saved Payments Management
+app.get("/api/customers/payments", (req, res) => {
+  try {
+    const { phone } = req.query;
+    if (!phone) {
+      res.status(400).json({ success: false, message: "ফোন নম্বর আবশ্যক।" });
+      return;
+    }
+    const db = getDB();
+    const cleanPhone = (phone as string).trim().replace(/\s+/g, "");
+    if (!db.customers) db.customers = [];
+    const customer = db.customers.find((c: any) => c.phone === cleanPhone);
+    if (!customer) {
+      res.status(404).json({ success: false, message: "গ্রাহক খুঁজে পাওয়া যায়নি।" });
+      return;
+    }
+    
+    if (!customer.savedPayments) {
+      // Initialize with default high-fidelity payments matching current view
+      customer.savedPayments = [
+        {
+          id: "pm-1",
+          type: "bkash",
+          name: "bKash Personal",
+          accountNo: "0188-***-7739",
+          holder: customer.name || "গ্রাহক",
+          isPrimary: true
+        },
+        {
+          id: "pm-2",
+          type: "card",
+          name: "MasterCard Premium",
+          cardNo: "•••• •••• •••• 4327",
+          holder: customer.name ? customer.name.toUpperCase() : "GRAHOK",
+          expires: "08/30",
+          isPrimary: false
+        }
+      ];
+      saveDB(db);
+    }
+    
+    res.json({ success: true, payments: customer.savedPayments });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post("/api/customers/payments/add", (req, res) => {
+  try {
+    const { phone, type, name, accountNo, cardNo, holder, expires, isPrimary } = req.body;
+    if (!phone || !type || !name) {
+      res.status(400).json({ success: false, message: "প্রয়োজনীয় তথ্য অনুপস্থিত।" });
+      return;
+    }
+    const db = getDB();
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!db.customers) db.customers = [];
+    const customer = db.customers.find((c: any) => c.phone === cleanPhone);
+    if (!customer) {
+      res.status(404).json({ success: false, message: "গ্রাহক খুঁজে পাওয়া যায়নি।" });
+      return;
+    }
+    
+    if (!customer.savedPayments) {
+      customer.savedPayments = [];
+    }
+    
+    // If setting as primary, remove primary flag from others
+    if (isPrimary) {
+      customer.savedPayments.forEach((p: any) => {
+        p.isPrimary = false;
+      });
+    }
+    
+    const newPayment = {
+      id: `pm-${Date.now()}`,
+      type,
+      name: name.trim(),
+      accountNo: accountNo ? accountNo.trim() : undefined,
+      cardNo: cardNo ? cardNo.trim() : undefined,
+      holder: holder ? holder.trim() : (customer.name || "গ্রাহক"),
+      expires: expires ? expires.trim() : undefined,
+      isPrimary: !!isPrimary
+    };
+    
+    customer.savedPayments.push(newPayment);
+    saveDB(db);
+    res.json({ success: true, payments: customer.savedPayments });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post("/api/customers/payments/delete", (req, res) => {
+  try {
+    const { phone, id } = req.body;
+    if (!phone || !id) {
+      res.status(400).json({ success: false, message: "প্রয়োজনীয় তথ্য অনুপস্থিত।" });
+      return;
+    }
+    const db = getDB();
+    const cleanPhone = phone.trim().replace(/\s+/g, "");
+    if (!db.customers) db.customers = [];
+    const customer = db.customers.find((c: any) => c.phone === cleanPhone);
+    if (!customer) {
+      res.status(404).json({ success: false, message: "গ্রাহক খুঁজে পাওয়া যায়নি।" });
+      return;
+    }
+    
+    if (customer.savedPayments) {
+      customer.savedPayments = customer.savedPayments.filter((p: any) => p.id !== id);
+      // Ensure at least one is primary if list is not empty and none is primary
+      if (customer.savedPayments.length > 0 && !customer.savedPayments.some((p: any) => p.isPrimary)) {
+        customer.savedPayments[0].isPrimary = true;
+      }
+      saveDB(db);
+    }
+    
+    res.json({ success: true, payments: customer.savedPayments || [] });
+  } catch (err: any) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // 10f. Affiliate - Update Avatar
 app.post("/api/affiliates/update-avatar", (req, res) => {
   try {
@@ -1157,6 +1283,77 @@ app.get("/sitemap.xml", (req, res) => {
 
 // ====================================================
 
+function serveHydratedHTML(req: express.Request, res: express.Response, htmlPath: string) {
+  try {
+    if (!fs.existsSync(htmlPath)) {
+      return res.status(404).send("File not found");
+    }
+
+    let html = fs.readFileSync(htmlPath, "utf-8");
+
+    const db = getDB();
+    const products = db.products || [];
+    const prodId = req.query.product;
+    const shopName = req.query.shop;
+    const category = req.query.category;
+    const search = req.query.search;
+
+    let title = "ZSHOP BD | Online Shopping in Bangladesh";
+    let description = "ZSHOP BD (জেডশপ বিডি) is the leading premium online shopping store in Bangladesh. Order authentic electronics, gadgets, clothing, and lifestyle items with cash on delivery.";
+    const host = req.headers.host || "zshopbd.com";
+    const protocol = req.secure || req.headers["x-forwarded-proto"] === "https" ? "https" : "http";
+    const baseUrl = `${protocol}://${host}`;
+    let url = baseUrl + "/";
+    let image = "https://images.unsplash.com/photo-1472851294608-062f824d296e?q=80&w=600&auto=format&fit=crop";
+
+    if (prodId) {
+      const product = products.find((p: any) => String(p.id) === String(prodId));
+      if (product) {
+        title = `${product.title} | Buy Online in Bangladesh - ZSHOP BD`;
+        description = product.description ? product.description.substring(0, 160) : `${product.title} on ZSHOP BD.`;
+        url = `${baseUrl}/?product=${product.id}`;
+        if (product.image) image = product.image;
+      }
+    } else if (shopName) {
+      title = `${shopName} Online Store | Verified Merchant - ZSHOP BD`;
+      description = `Shop authentic products, electronic gadgets, and garments from ${shopName} at ZSHOP BD. Nation-wide fast shipping and Cash on Delivery.`;
+      url = `${baseUrl}/?shop=${encodeURIComponent(String(shopName))}`;
+    } else if (category) {
+      title = `${category} Collection | Premium Shopping BD - ZSHOP BD`;
+      description = `Explore the latest curated collections in ${category} on ZSHOP BD. Guaranteed authenticity, easy returns, and customer satisfaction.`;
+      url = `${baseUrl}/?category=${encodeURIComponent(String(category))}`;
+    } else if (search) {
+      title = `Search results for "${search}" | ZSHOP BD`;
+      description = `Find the best prices and deals for "${search}" on ZSHOP BD. Best quality, cash on delivery, and quick delivery.`;
+      url = `${baseUrl}/?search=${encodeURIComponent(String(search))}`;
+    }
+
+    const safeTitle = title.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const safeDesc = description.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    // Replace default tags inside html
+    html = html.replace(/<title>.*?<\/title>/, `<title>${safeTitle}</title>`);
+    html = html.replace(/<meta name="description" content=".*?" \/>/, `<meta name="description" content="${safeDesc}" />`);
+    
+    // Open Graph
+    html = html.replace(/<meta property="og:title" content=".*?" \/>/, `<meta property="og:title" content="${safeTitle}" />`);
+    html = html.replace(/<meta property="og:description" content=".*?" \/>/, `<meta property="og:description" content="${safeDesc}" />`);
+    html = html.replace(/<meta property="og:image" content=".*?" \/>/, `<meta property="og:image" content="${image}" />`);
+    html = html.replace(/<meta property="og:url" content=".*?" \/>/, `<meta property="og:url" content="${url}" />`);
+
+    // Twitter Card
+    html = html.replace(/<meta name="twitter:title" content=".*?" \/>/, `<meta name="twitter:title" content="${safeTitle}" />`);
+    html = html.replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${safeDesc}" />`);
+    html = html.replace(/<meta name="twitter:image" content=".*?" \/>/, `<meta name="twitter:image" content="${image}" />`);
+
+    res.header("Content-Type", "text/html");
+    res.status(200).send(html);
+  } catch (err) {
+    console.error("Hydration failed:", err);
+    res.sendFile(htmlPath);
+  }
+}
+
 // Vite Middleware integrating or Production static folder setup
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
@@ -1169,7 +1366,7 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      serveHydratedHTML(req, res, path.join(distPath, "index.html"));
     });
   }
 

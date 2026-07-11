@@ -28,6 +28,7 @@ import CustomerProfile from "./components/CustomerProfile";
 import FlashSale from "./components/FlashSale";
 import SearchResultsView from "./components/SearchResultsView";
 import ShopView from "./components/ShopView";
+import SeoManager from "./components/SeoManager";
 import { Product, CartItem, Order, BrandingSettings } from "./types";
 import { PRODUCTS, CATEGORIES } from "./data";
 
@@ -382,6 +383,7 @@ export default function App() {
   const [cartInitialStep, setCartInitialStep] = useState<"cart" | "form">("cart");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
+  const [show404Page, setShow404Page] = useState<boolean>(false);
   
   // Custom sorting & range utilities
   const [priceRange, setPriceRange] = useState<"all" | "low" | "mid" | "high">("all");
@@ -409,17 +411,76 @@ export default function App() {
     return () => window.removeEventListener("scroll", checkScroll);
   }, []);
 
-  // Deep-link parsing for individual product share links
+  // Clean URL Path Routing and deep link parser
   useEffect(() => {
+    if (products.length === 0) return;
+
     try {
-      const params = new URLSearchParams(window.location.search);
-      const prodId = params.get("product");
-      if (prodId && products.length > 0) {
+      const pathname = window.location.pathname;
+      const search = window.location.search;
+      const params = new URLSearchParams(search);
+
+      // Reset any active 404 on clean load
+      setShow404Page(false);
+
+      if (pathname.startsWith("/product/")) {
+        const prodId = pathname.replace("/product/", "").trim();
         const match = products.find((p) => String(p.id) === String(prodId));
         if (match) {
           setSelectedProduct(match);
           setIsDetailModalOpen(true);
+        } else {
+          setShow404Page(true);
         }
+      } else if (pathname.startsWith("/shop/")) {
+        const rawShop = pathname.replace("/shop/", "").trim();
+        const shop = decodeURIComponent(rawShop);
+        if (shop) {
+          setSelectedShopName(shop);
+        } else {
+          setShow404Page(true);
+        }
+      } else if (pathname.startsWith("/category/")) {
+        const rawCat = pathname.replace("/category/", "").trim();
+        const catId = decodeURIComponent(rawCat);
+        if (catId) {
+          setSelectedCategory(catId);
+        } else {
+          setShow404Page(true);
+        }
+      } else if (pathname.startsWith("/search/")) {
+        const rawQuery = pathname.replace("/search/", "").trim();
+        const query = decodeURIComponent(rawQuery);
+        if (query) {
+          setSearchQuery(query);
+        } else {
+          setShow404Page(true);
+        }
+      } else if (pathname === "/" || pathname === "/index.html") {
+        // Fallback to query params
+        const prodId = params.get("product");
+        const shop = params.get("shop");
+        const category = params.get("category");
+        const searchVal = params.get("search");
+
+        if (prodId) {
+          const match = products.find((p) => String(p.id) === String(prodId));
+          if (match) {
+            setSelectedProduct(match);
+            setIsDetailModalOpen(true);
+          } else {
+            setShow404Page(true);
+          }
+        } else if (shop) {
+          setSelectedShopName(shop);
+        } else if (category) {
+          setSelectedCategory(category);
+        } else if (searchVal) {
+          setSearchQuery(searchVal);
+        }
+      } else {
+        // Any random route that isn't root, product, shop, category, search
+        setShow404Page(true);
       }
 
       // Check for affiliate referral telephone
@@ -435,9 +496,32 @@ export default function App() {
         }).catch(err => console.error("Error logging click stats:", err));
       }
     } catch (e) {
-      console.error("Deep link parse error:", e);
+      console.error("SEO URL routing error:", e);
     }
   }, [products]);
+
+  // Synchronize active states with clean SEO URLs in address bar
+  useEffect(() => {
+    try {
+      let newUrl = "/";
+      if (isDetailModalOpen && selectedProduct) {
+        newUrl = `/product/${selectedProduct.id}`;
+      } else if (selectedShopName) {
+        newUrl = `/shop/${encodeURIComponent(selectedShopName)}`;
+      } else if (searchQuery) {
+        newUrl = `/search/${encodeURIComponent(searchQuery)}`;
+      } else if (selectedCategory && selectedCategory !== "all") {
+        newUrl = `/category/${encodeURIComponent(selectedCategory)}`;
+      }
+
+      // Check if current path matches to prevent infinite history stack spam
+      if (window.location.pathname !== newUrl) {
+        window.history.replaceState(null, "", newUrl);
+      }
+    } catch (e) {
+      console.error("Failed to sync clean SEO URL:", e);
+    }
+  }, [selectedProduct, isDetailModalOpen, selectedShopName, searchQuery, selectedCategory]);
 
   // Format currency helper
   const formatBDT = (amount: number) => {
@@ -763,6 +847,14 @@ export default function App() {
     <div className="flex flex-col min-h-screen bg-white text-slate-900" id="applet-viewport">
       <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
       
+      <SeoManager
+        selectedProduct={selectedProduct}
+        selectedShopName={selectedShopName}
+        selectedCategory={selectedCategory}
+        searchQuery={searchQuery}
+        categoryName={activeCategoryDetail?.name}
+      />
+      
       {/* 1. Header Navigation elements */}
       <Navbar
         cart={cart}
@@ -785,7 +877,31 @@ export default function App() {
       />
 
       <main className="flex-1">
-        {selectedShopName ? (
+        {show404Page ? (
+          <section className="max-w-xl mx-auto py-24 px-6 text-center space-y-6" id="custom-404-container">
+            <div className="w-24 h-24 bg-orange-50 border border-orange-100 rounded-full flex items-center justify-center text-[#f85606] mx-auto mb-6">
+              <ShoppingBag className="w-12 h-12" />
+            </div>
+            <h1 className="text-3xl font-display font-black text-slate-900">404 - Page Not Found</h1>
+            <p className="text-sm text-gray-500 leading-relaxed font-medium">
+              We couldn't locate the shopping page, product page, or store you are looking for. It might have been relocated, or doesn't exist anymore. Browse our general catalog for more deals!
+            </p>
+            <button
+              onClick={() => {
+                setShow404Page(false);
+                setSelectedShopName(null);
+                setSelectedCategory("all");
+                setSearchQuery("");
+                setSelectedProduct(null);
+                setIsDetailModalOpen(false);
+                window.history.pushState(null, "", "/");
+              }}
+              className="px-6 py-3 bg-slate-950 hover:bg-[#f85606] text-white text-xs font-display font-bold rounded-xl transition-colors cursor-pointer focus:outline-none shadow-md inline-block"
+            >
+              Back to Home Shopping
+            </button>
+          </section>
+        ) : selectedShopName ? (
           <ShopView
             shopName={selectedShopName}
             products={products}
@@ -794,6 +910,7 @@ export default function App() {
             onOrderNow={handleOrderNow}
             onOpenQuickView={handleOpenQuickView}
             branding={brandingSettings}
+            isDetailModalOpen={isDetailModalOpen}
           />
         ) : (
           <>
@@ -859,9 +976,15 @@ export default function App() {
                       {selectedCategory === "all" ? "STORE GENERAL CATALOG" : `${activeCategoryDetail?.name.toUpperCase()}`}
                     </span>
                   </div>
-                  <h1 className="text-2xl font-display font-black text-slate-950 mt-1">
-                    {searchQuery ? `Searching for: "${searchQuery}"` : activeCategoryDetail?.name}
-                  </h1>
+                  {isDetailModalOpen ? (
+                    <h2 className="text-2xl font-display font-black text-slate-950 mt-1">
+                      {searchQuery ? `Searching for: "${searchQuery}"` : activeCategoryDetail?.name}
+                    </h2>
+                  ) : (
+                    <h1 className="text-2xl font-display font-black text-slate-950 mt-1">
+                      {searchQuery ? `Searching for: "${searchQuery}"` : activeCategoryDetail?.name}
+                    </h1>
+                  )}
                   <p className="text-xs text-gray-400 font-medium mt-1 font-sans">
                     {searchQuery 
                       ? `Showing ${filteredProducts.length} results matching keywords` 

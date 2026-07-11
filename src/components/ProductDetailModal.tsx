@@ -147,6 +147,22 @@ export default function ProductDetailModal({
   // Cart Status Counter state
   const [cartCount, setCartCount] = useState<number>(0);
 
+  const isMerchantVerified = useMemo(() => {
+    const sName = product?.merchantShopName || "ZSHOP BD";
+    if (sName.toLowerCase() === "zshop bd") return true;
+    try {
+      const saved = localStorage.getItem("zshop_bd_merchants_v1");
+      if (saved) {
+        const merchants = JSON.parse(saved);
+        const found = merchants.find((m: any) => m.shopName && m.shopName.toLowerCase() === sName.toLowerCase());
+        return found ? !!found.isVerified : false;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return false;
+  }, [product]);
+
   // Real product views count state
   const [realViewsCount, setRealViewsCount] = useState<number | null>(null);
 
@@ -1212,11 +1228,15 @@ export default function ProductDetailModal({
               <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="font-extrabold text-slate-900 text-[15px]">{product?.merchantShopName || "ZSHOP BD"}</span>
-                  <span className="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
+                  {isMerchantVerified && (
+                    <span className="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold" title="Verified Merchant">✔</span>
+                  )}
                 </div>
-                <span className="text-[10px] text-gray-400 leading-tight">Verified Merchant</span>
+                <span className="text-[10px] text-gray-400 leading-tight">
+                  {isMerchantVerified ? "Verified Merchant" : "Standard Seller Partner"}
+                </span>
                 <span className="text-xs text-gray-600 mt-1 font-medium bg-[#fafafa] border border-gray-100 px-2 py-0.5 rounded-full inline-block">
-                  {product?.merchantShopName ? "Verified Store Partner" : "Digital & Fashion Retailer"}
+                  {(!product?.merchantShopName || product.merchantShopName === "ZSHOP BD") ? "Digital & Fashion Retailer" : isMerchantVerified ? "Verified Store Partner" : "Store Partner"}
                 </span>
               </div>
             </div>

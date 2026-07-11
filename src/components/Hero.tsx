@@ -87,9 +87,9 @@ export default function Hero({ onCtaClick }: HeroProps) {
                     {promo.badge}
                   </div>
                   
-                  <h1 className="text-sm xs:text-base sm:text-2xl md:text-2.5xl lg:text-3.5xl xl:text-4.5xl font-display font-black text-white leading-tight tracking-tight mb-1.5 sm:mb-3 drop-shadow-sm">
+                  <h2 className="text-sm xs:text-base sm:text-2xl md:text-2.5xl lg:text-3.5xl xl:text-4.5xl font-display font-black text-white leading-tight tracking-tight mb-1.5 sm:mb-3 drop-shadow-sm">
                     {promo.title}
-                  </h1>
+                  </h2>
                   
                   <p className="text-[10px] sm:text-xs md:text-sm text-slate-300 font-sans leading-relaxed mb-3 sm:mb-6 max-w-xs sm:max-w-md font-medium line-clamp-2 sm:line-clamp-none drop-shadow-xs">
                     {promo.subtitle}

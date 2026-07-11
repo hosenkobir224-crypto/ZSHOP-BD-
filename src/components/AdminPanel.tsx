@@ -618,6 +618,47 @@ export default function AdminPanel({
     }
   };
 
+  const handleToggleMerchantVerification = async (merchantId: string) => {
+    try {
+      const updatedMerchants = accounts.merchants.map((m) => {
+        if (m.id === merchantId) {
+          return { ...m, isVerified: !m.isVerified };
+        }
+        return m;
+      });
+
+      const updatedAccounts = {
+        ...accounts,
+        merchants: updatedMerchants
+      };
+      setAccounts(updatedAccounts);
+
+      const res = await fetch("/api/admin/accounts/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatedAccounts)
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("zshop_bd_merchants_v1", JSON.stringify(updatedMerchants));
+        window.dispatchEvent(new Event("zshop_bd_accounts_updated"));
+        
+        try {
+          const channel = new BroadcastChannel("zshop_bd_realtime");
+          channel.postMessage("accounts_updated");
+          channel.close();
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        alert("ভেরিফিকেশন স্ট্যাটাস আপডেট করতে ব্যর্থ হয়েছে।");
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle merchant verification:", err);
+      alert("সার্ভার ত্রুটি: " + err.message);
+    }
+  };
+
   // Product Operations
   const handleToggleStockStatus = (productId: string) => {
     const updated = products.map(p => {
@@ -2568,9 +2609,33 @@ export default function AdminPanel({
 
                                 {/* Custom fields logic */}
                                 {acc.role === "merchant" && (
-                                  <div className="bg-slate-950/20 p-2 rounded border border-slate-850 text-[11px] leading-relaxed text-slate-400 space-y-1">
-                                    <p><strong className="text-slate-300">দোকানের নাম:</strong> {acc.shopName || "N/A"}</p>
+                                  <div className="bg-slate-950/20 p-2 rounded border border-slate-850 text-[11px] leading-relaxed text-slate-400 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <p><strong className="text-slate-300">দোকানের নাম:</strong> {acc.shopName || "N/A"}</p>
+                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                                        acc.isVerified 
+                                          ? "bg-blue-500/15 text-blue-400 border border-blue-500/30" 
+                                          : "bg-slate-800 text-slate-500 border border-slate-700/50"
+                                      }`}>
+                                        {acc.isVerified ? "✓ Verified" : "Unverified"}
+                                      </span>
+                                    </div>
                                     {acc.address && <p><strong className="text-slate-300">ঠিকানা:</strong> {acc.address}</p>}
+                                    
+                                    <div className="pt-1.5 border-t border-slate-800/80 flex items-center justify-between">
+                                      <span className="text-[9.5px] text-slate-500 font-sans">ভেরিফিকেশন:</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleToggleMerchantVerification(acc.id)}
+                                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                                          acc.isVerified
+                                            ? "bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20"
+                                            : "bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20"
+                                        }`}
+                                      >
+                                        {acc.isVerified ? "✘ Remove Verified" : "✓ Mark Verified"}
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
 

@@ -340,7 +340,8 @@ export default function SearchResultsView({
                   <div className="relative aspect-square overflow-hidden bg-[#f4f4f6] shrink-0">
                     <img
                       src={product.image}
-                      alt={product.title}
+                      alt={`${product.title} - Search Results | ZSHOP BD`}
+                      loading="lazy"
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover object-center group-hover:scale-[1.03] transition-transform duration-500 ease-out"
                     />
