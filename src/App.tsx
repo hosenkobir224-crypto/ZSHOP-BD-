@@ -29,6 +29,7 @@ import FlashSale from "./components/FlashSale";
 import SearchResultsView from "./components/SearchResultsView";
 import ShopView from "./components/ShopView";
 import SeoManager from "./components/SeoManager";
+import WelcomeSplash from "./components/WelcomeSplash";
 import { Product, CartItem, Order, BrandingSettings } from "./types";
 import { PRODUCTS, CATEGORIES } from "./data";
 
@@ -384,6 +385,7 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
   const [show404Page, setShow404Page] = useState<boolean>(false);
+  const [showSplash, setShowSplash] = useState<boolean>(true);
   
   // Custom sorting & range utilities
   const [priceRange, setPriceRange] = useState<"all" | "low" | "mid" | "high">("all");
@@ -846,6 +848,8 @@ export default function App() {
   return (
     <div className="flex flex-col min-h-screen bg-white text-slate-900" id="applet-viewport">
       <style dangerouslySetInnerHTML={{ __html: dynamicCss }} />
+      
+      {showSplash && <WelcomeSplash onComplete={() => setShowSplash(false)} />}
       
       <SeoManager
         selectedProduct={selectedProduct}

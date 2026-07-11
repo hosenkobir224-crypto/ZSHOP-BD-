@@ -34,6 +34,7 @@ import {
 import { Product, Order, OrderItem, Promotion, BrandingSettings } from "../types";
 import { PROMOTIONS } from "../data";
 import { compressImage } from "../lib/utils";
+import ZShopLogo from "./ZShopLogo";
 import { 
   getPixelConfig, 
   savePixelConfig, 
@@ -2861,16 +2862,7 @@ export default function AdminPanel({
                               {logoType === "image" && logoImage ? (
                                 <img src={logoImage} alt="Preview" className="h-6 object-contain" />
                               ) : (
-                                <>
-                                  <div className="w-6 h-6 bg-slate-950 text-white rounded-md flex items-center justify-center font-bold text-xs select-none">
-                                    {(logoText || "Z")[0]?.toUpperCase()}
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="font-extrabold text-xs text-slate-950 leading-none">
-                                      {logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-[10px] ml-0.5">{logoSuffix || "BD"}</span>
-                                    </span>
-                                  </div>
-                                </>
+                                <ZShopLogo variant="full-horizontal" className="scale-[0.8] origin-left" />
                               )}
                             </div>
                             

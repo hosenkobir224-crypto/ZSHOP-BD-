@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { BrandingSettings } from "../types";
+import ZShopLogo from "./ZShopLogo";
 
 interface FooterProps {
   onOpenAdmin?: () => void;
@@ -42,14 +43,7 @@ export default function Footer({ onOpenAdmin, branding }: FooterProps) {
             {branding?.logoType === "image" && branding?.logoImage ? (
               <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-9 object-contain bg-slate-900 p-1 rounded-lg" />
             ) : (
-              <>
-                <div className="w-9 h-9 bg-white text-slate-950 rounded-xl flex items-center justify-center font-display font-black text-lg">
-                  {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
-                </div>
-                <span className="font-display font-black text-2xl tracking-normal text-white">
-                  {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-lg ml-0.5">{branding?.logoSuffix || "BD"}</span>
-                </span>
-              </>
+              <ZShopLogo variant="horizontal-light" />
             )}
           </div>
           <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-sm">

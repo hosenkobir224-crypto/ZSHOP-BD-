@@ -35,6 +35,7 @@ import {
 import { Product, BrandingSettings } from "../types";
 import { PRODUCTS } from "../data";
 import { compressImage } from "../lib/utils";
+import ZShopLogo from "./ZShopLogo";
 
 interface Review {
   id: string;
@@ -696,19 +697,7 @@ export default function ProductDetailModal({
               {branding?.logoType === "image" && branding?.logoImage ? (
                 <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-8 object-contain" />
               ) : (
-                <>
-                  <div className="w-8 h-8 bg-slate-950 text-white rounded-lg flex items-center justify-center font-display font-black text-base tracking-tight shadow-sm">
-                    {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-display font-extrabold text-sm tracking-normal text-slate-950 leading-none">
-                      {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-xs ml-0.5">{branding?.logoSuffix || "BD"}</span>
-                    </span>
-                    <span className="text-[7px] tracking-[0.15em] uppercase text-gray-400 font-mono mt-0.5 font-bold">
-                      {branding?.logoSlogan || "Retail Revolution"}
-                    </span>
-                  </div>
-                </>
+                <ZShopLogo variant="full-horizontal" />
               )}
             </div>
           </div>

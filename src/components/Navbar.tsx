@@ -23,6 +23,7 @@ import {
 import { Category, CartItem, Product, BrandingSettings } from "../types";
 import { CATEGORIES } from "../data";
 import { compressImage } from "../lib/utils";
+import ZShopLogo from "./ZShopLogo";
 
 interface NavbarProps {
   cart: CartItem[];
@@ -185,19 +186,7 @@ export default function Navbar({
               {branding?.logoType === "image" && branding?.logoImage ? (
                 <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-10 object-contain" />
               ) : (
-                <>
-                  <div className="w-10 h-10 bg-slate-950 text-white rounded-xl flex items-center justify-center font-display font-black text-xl tracking-tight shadow-md shadow-slate-900/10 group-hover:scale-105 transition-transform duration-200">
-                    {(branding?.logoText || "ZSHOP")[0]?.toUpperCase() || "Z"}
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="font-display font-extrabold text-2xl tracking-normal text-slate-950 leading-none">
-                      {branding?.logoText || "ZSHOP"}<span className="text-amber-500 font-semibold text-lg ml-0.5">{branding?.logoSuffix || "BD"}</span>
-                    </span>
-                    <span className="text-[9px] tracking-[0.18em] uppercase text-gray-500 font-mono mt-0.5 font-medium">
-                      {branding?.logoSlogan || "Retail Revolution"}
-                    </span>
-                  </div>
-                </>
+                <ZShopLogo variant="full-horizontal" />
               )}
             </a>
           </div>
