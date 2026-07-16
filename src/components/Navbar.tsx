@@ -169,7 +169,7 @@ export default function Navbar({
     <header className="w-full relative z-40 bg-white" id="main-header">
       {/* Sticky Primary Header */}
       <div className="w-full sticky top-0 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 py-3.5 px-4 sm:px-6 lg:px-8 transition-all duration-300">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 relative">
           
           {/* Logo Branding */}
           <div className="flex items-center gap-2">
@@ -182,11 +182,11 @@ export default function Navbar({
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             
-            <a href="/" className="flex items-center gap-2 select-none group" id="navbar-logo">
+            <a href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0 flex items-center select-none group" id="navbar-logo">
               {branding?.logoType === "image" && branding?.logoImage ? (
                 <img src={branding.logoImage} alt={branding.logoText || "Logo"} className="h-10 object-contain" />
               ) : (
-                <ZShopLogo variant="full-horizontal" />
+                <ZShopLogo variant="full-vertical" catchEye={true} size="md" />
               )}
             </a>
           </div>
